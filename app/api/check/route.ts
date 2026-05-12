@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { fetchSiteHtml, normalizeUrl } from "@/app/lib/fetch-site";
+import { fetchSiteHtml, normalizeUrl, toDisplayUrl } from "@/app/lib/fetch-site";
 import { fetchSitePages } from "@/app/lib/fetch-pages";
 import { analyzeWithClaude } from "@/app/lib/claude";
 import { basicCheckHtml } from "@/app/lib/basic-check";
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
   // Quick mode
   try {
     const { html, finalUrl } = await fetchSiteHtml(url);
-    const result = basicCheckHtml(finalUrl, html);
+    const result = basicCheckHtml(toDisplayUrl(finalUrl), html);
     const spa = detectSpa(html);
     if (spa.isLikelySpa) {
       result.spaDetected = true;

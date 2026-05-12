@@ -104,6 +104,18 @@ function findLink(
   return undefined;
 }
 
+function toDisplayUrl(url: string): string {
+  try {
+    const { domainToUnicode } = require("url") as typeof import("url");
+    const u = new URL(url);
+    const unicode = domainToUnicode(u.hostname);
+    if (unicode && unicode !== u.hostname) {
+      return url.replace(u.hostname, unicode);
+    }
+  } catch { /* noop */ }
+  return url;
+}
+
 export async function fetchSitePages(inputUrl: string): Promise<SitePages> {
   const deadline = Date.now() + TOTAL_TIMEOUT;
 
@@ -120,7 +132,7 @@ export async function fetchSitePages(inputUrl: string): Promise<SitePages> {
   }
 
   const homepage: SitePages["homepage"] = {
-    url: finalUrl,
+    url: toDisplayUrl(finalUrl),
     html: homeHtml,
     status: homeRes.status,
   };

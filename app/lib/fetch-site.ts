@@ -38,6 +38,18 @@ export async function fetchSiteHtml(
   }
 }
 
+export function toDisplayUrl(url: string): string {
+  try {
+    const { domainToUnicode } = require("url") as typeof import("url");
+    const u = new URL(url);
+    const unicode = domainToUnicode(u.hostname);
+    if (unicode && unicode !== u.hostname) {
+      return url.replace(u.hostname, unicode);
+    }
+  } catch { /* noop */ }
+  return url;
+}
+
 export function normalizeUrl(input: string): string {
   let url = input.trim();
   if (!/^https?:\/\//i.test(url)) {
