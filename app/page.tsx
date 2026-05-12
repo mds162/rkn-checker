@@ -8,9 +8,38 @@ import type { CheckResult } from "./lib/types";
 
 export default function Home() {
   const [result, setResult] = useState<CheckResult | null>(null);
+  const [proLoading, setProLoading] = useState(false);
+  const [proError, setProError] = useState<string | null>(null);
+
+  async function handleCheckPro(url: string) {
+    setProLoading(true);
+    setProError(null);
+    try {
+      const res = await fetch("/api/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url, mode: "pro" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Ошибка проверки");
+      setResult(data as CheckResult);
+    } catch (e) {
+      setProError(e instanceof Error ? e.message : "Что-то пошло не так");
+    } finally {
+      setProLoading(false);
+    }
+  }
 
   if (result) {
-    return <ResultDisplay result={result} onReset={() => setResult(null)} />;
+    return (
+      <ResultDisplay
+        result={result}
+        onReset={() => { setResult(null); setProError(null); }}
+        onCheckPro={handleCheckPro}
+        proLoading={proLoading}
+        proError={proError}
+      />
+    );
   }
 
   return (

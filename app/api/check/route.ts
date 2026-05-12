@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { fetchSiteHtml, normalizeUrl } from "@/app/lib/fetch-site";
+import { fetchSitePages } from "@/app/lib/fetch-pages";
 import { analyzeWithClaude } from "@/app/lib/claude";
 import { basicCheckHtml } from "@/app/lib/basic-check";
+import { detectCmp } from "@/app/lib/cmp-detector";
+import { analyzeForms } from "@/app/lib/form-analyzer";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -30,8 +33,10 @@ export async function POST(req: Request) {
       );
     }
     try {
-      const { html, finalUrl } = await fetchSiteHtml(url, { maxBytes: 200000 });
-      const result = await analyzeWithClaude(finalUrl, html, apiKey);
+      const pages = await fetchSitePages(url);
+      const cmp = detectCmp(pages.homepage.html);
+      const forms = analyzeForms(pages.homepage.html);
+      const result = await analyzeWithClaude(pages, cmp, forms, apiKey);
       return NextResponse.json(result);
     } catch (e) {
       const message = e instanceof Error ? e.message : "Неизвестная ошибка";

@@ -9,11 +9,18 @@ export type Violation = {
   severity: "low" | "medium" | "high" | "critical";
 };
 
+export type PassedRule = {
+  id: string;
+  category: string;
+  title: string;
+};
+
 export type CheckResult = {
   url: string;
   checkedAt: string;
   mode: "quick" | "pro";
   violations: Violation[];
+  passed: PassedRule[];
   totalFineMin: number;
   totalFineMax: number;
   realisticFine: number;

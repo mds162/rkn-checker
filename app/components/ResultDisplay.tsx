@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import type { CheckResult, Violation } from "../lib/types";
+import type { CheckResult, PassedRule, Violation } from "../lib/types";
+import { LAWS } from "../lib/laws";
 import { OrderFixForm } from "./OrderFixForm";
 
 const fmt = (n: number) =>
@@ -24,15 +25,25 @@ const SEVERITY_LABEL: Record<Violation["severity"], string> = {
 type Props = {
   result: CheckResult;
   onReset: () => void;
+  onCheckPro?: (url: string) => void;
+  proLoading?: boolean;
+  proError?: string | null;
 };
 
-export function ResultDisplay({ result, onReset }: Props) {
+export function ResultDisplay({ result, onReset, onCheckPro, proLoading, proError }: Props) {
   const [showOrder, setShowOrder] = useState(false);
   const [paid, setPaid] = useState(false);
 
   const sorted = [...result.violations].sort((a, b) => b.fineMax - a.fineMax);
   const top3 = sorted.slice(0, 3);
   const rest = sorted.slice(3);
+
+  const checkedIds = new Set([
+    ...result.violations.map((v) => v.id),
+    ...result.passed.map((p) => p.id),
+  ]);
+  const uncheckedRules = LAWS.filter((l) => !checkedIds.has(l.id));
+  const uncheckedCategories = [...new Set(uncheckedRules.map((r) => r.category))];
 
   return (
     <div className="w-full max-w-4xl mx-auto py-12 px-4">
@@ -132,6 +143,60 @@ export function ResultDisplay({ result, onReset }: Props) {
         </div>
       )}
 
+      {result.passed.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-200 p-8 mb-6">
+          <h2 className="text-xl font-bold mb-4 text-green-700">
+            ✓ Пройдено успешно — {result.passed.length} из {result.rulesChecked} проверок
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {result.passed.map((p) => (
+              <PassedCard key={p.id} p={p} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {result.mode === "quick" && uncheckedRules.length > 0 && onCheckPro && (
+        <div className="bg-amber-50 border border-amber-300 rounded-2xl p-8 mb-6">
+          <div className="flex items-start gap-4">
+            <div className="text-3xl">🤖</div>
+            <div className="flex-1">
+              <h2 className="text-xl font-bold text-amber-900 mb-2">
+                Быстрая проверка охватывает только 12 из {uncheckedRules.length + checkedIds.size} правил
+              </h2>
+              <p className="text-amber-800 text-sm mb-4">
+                AI читает весь HTML и проверяет {uncheckedRules.length} дополнительных правил — реквизиты,
+                рекламу, пользовательские соглашения, возрастной контент и другое. Это занимает 15–30 секунд.
+              </p>
+              <div className="mb-5">
+                <div className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-2">
+                  Категории, которые проверит AI:
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {uncheckedCategories.map((cat) => (
+                    <span key={cat} className="text-sm bg-white border border-amber-300 text-amber-900 px-3 py-1 rounded-full font-medium">
+                      {cat}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              {proError && (
+                <div className="mb-3 p-3 bg-red-50 border border-red-200 text-red-800 rounded-lg text-sm">
+                  {proError}
+                </div>
+              )}
+              <button
+                onClick={() => onCheckPro(result.url)}
+                disabled={proLoading}
+                className="px-6 py-3 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-semibold rounded-lg transition"
+              >
+                {proLoading ? "AI анализирует… подождите 15–30 сек" : "Запустить полную проверку через AI →"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-gradient-to-br from-brand to-brand-dark rounded-2xl p-8 text-white">
         <h2 className="text-2xl font-bold mb-2">Не хочется разбираться самому?</h2>
         <p className="mb-6 opacity-90">
@@ -148,6 +213,34 @@ export function ResultDisplay({ result, onReset }: Props) {
             Заказать исправление
           </button>
         )}
+      </div>
+    </div>
+  );
+}
+
+const PASSED_LABEL: Record<string, string> = {
+  "google-analytics": "Google Analytics не подключён",
+  "google-fonts": "Google Fonts не используется",
+  "facebook-pixel": "Facebook Pixel не установлен",
+  "meta-links": "Ссылки на Meta-сервисы оформлены корректно или отсутствуют",
+  "pd-policy": "Политика конфиденциальности присутствует",
+  "cookie-banner": "Cookie-баннер найден",
+  "ssl": "Сайт работает по HTTPS",
+  "age-marker": "Возрастная маркировка присутствует",
+  "lang-headers": "Навигация на русском языке",
+  "lang-anglicisms": "Англицизмы в заголовках не обнаружены",
+  "req-inn": "ИНН организации указан",
+  "pd-cross-border": "Иностранные сервисы с ПДн не обнаружены",
+};
+
+function PassedCard({ p }: { p: PassedRule }) {
+  const label = PASSED_LABEL[p.id] ?? p.title;
+  return (
+    <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm">
+      <span className="text-green-600 mt-0.5 font-bold">✓</span>
+      <div>
+        <div className="font-medium text-green-900">{label}</div>
+        <div className="text-green-700 text-xs mt-0.5">{p.category}</div>
       </div>
     </div>
   );

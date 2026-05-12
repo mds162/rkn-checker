@@ -1,7 +1,22 @@
 import { LAWS } from "./laws";
-import type { CheckResult, Violation } from "./types";
+import type { CheckResult, PassedRule, Violation } from "./types";
 
-const RULES_CHECKED = 12;
+const QUICK_RULE_IDS = [
+  "google-analytics",
+  "google-fonts",
+  "facebook-pixel",
+  "meta-links",
+  "pd-policy",
+  "cookie-banner",
+  "ssl",
+  "age-marker",
+  "lang-headers",
+  "lang-anglicisms",
+  "req-inn",
+  "pd-cross-border",
+];
+
+const RULES_CHECKED = QUICK_RULE_IDS.length;
 
 export function basicCheckHtml(url: string, html: string): CheckResult {
   const violations: Violation[] = [];
@@ -120,6 +135,14 @@ export function basicCheckHtml(url: string, html: string): CheckResult {
     );
   }
 
+  const violatedIds = new Set(violations.map((v) => v.id));
+  const passed: PassedRule[] = QUICK_RULE_IDS
+    .filter((id) => !violatedIds.has(id))
+    .map((id) => {
+      const rule = LAWS.find((l) => l.id === id)!;
+      return { id: rule.id, category: rule.category, title: rule.title };
+    });
+
   const totalFineMin = violations.reduce((s, v) => s + v.fineMin, 0);
   const totalFineMax = violations.reduce((s, v) => s + v.fineMax, 0);
   const realisticFine = Math.round((totalFineMin + totalFineMax) / 2);
@@ -130,6 +153,7 @@ export function basicCheckHtml(url: string, html: string): CheckResult {
     checkedAt: new Date().toISOString(),
     mode: "quick",
     violations,
+    passed,
     totalFineMin,
     totalFineMax,
     realisticFine,
