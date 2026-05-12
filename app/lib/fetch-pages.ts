@@ -3,6 +3,8 @@ export type SitePages = {
   policy?: { url: string; content: string; isPdf: boolean; status: number };
   terms?: { url: string; content: string; isPdf: boolean; status: number };
   contacts?: { url: string; content: string; status: number };
+  offer?: { url: string; content: string; status: number };
+  returnPolicy?: { url: string; content: string; status: number };
   extraPages: { url: string; content: string; status: number }[];
 };
 
@@ -21,6 +23,8 @@ const TERMS_KEYWORDS = [
   "оферта",
 ];
 const CONTACTS_KEYWORDS = ["контакты", "о компании", "реквизиты", "about", "contacts"];
+const OFFER_KEYWORDS = ["оферта", "договор-оферта", "условия продажи", "условия покупки", "публичный договор"];
+const RETURN_KEYWORDS = ["возврат товара", "возврат и обмен", "условия возврата", "гарантия и возврат"];
 
 const MAX_BYTES = 500_000;
 const REQUEST_TIMEOUT = 10_000;
@@ -115,6 +119,8 @@ export async function fetchSitePages(inputUrl: string): Promise<SitePages> {
   const policyUrl = findLink(links, POLICY_KEYWORDS);
   const termsUrl = findLink(links, TERMS_KEYWORDS);
   const contactsUrl = findLink(links, CONTACTS_KEYWORDS);
+  const offerUrl = findLink(links, OFFER_KEYWORDS);
+  const returnUrl = findLink(links, RETURN_KEYWORDS);
 
   const result: SitePages = { homepage, extraPages: [] };
 
@@ -165,6 +171,20 @@ export async function fetchSitePages(inputUrl: string): Promise<SitePages> {
   if (contactsUrl && contactsUrl !== policyUrl && contactsUrl !== termsUrl) {
     const r = await safeFetch(contactsUrl);
     if (r) result.contacts = { url: contactsUrl, content: r.content, status: r.status };
+  }
+
+  // 5. Fetch offer
+  const fetchedUrls = new Set([policyUrl, termsUrl, contactsUrl].filter(Boolean));
+  if (offerUrl && !fetchedUrls.has(offerUrl)) {
+    const r = await safeFetch(offerUrl);
+    if (r) result.offer = { url: offerUrl, content: r.content, status: r.status };
+    fetchedUrls.add(offerUrl);
+  }
+
+  // 6. Fetch return policy
+  if (returnUrl && !fetchedUrls.has(returnUrl)) {
+    const r = await safeFetch(returnUrl);
+    if (r) result.returnPolicy = { url: returnUrl, content: r.content, status: r.status };
   }
 
   return result;

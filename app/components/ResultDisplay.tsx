@@ -168,13 +168,13 @@ export function ResultDisplay({ result, onReset, onCheckPro, proLoading, proErro
       )}
 
       {/* Passed rules */}
-      {result.passed.length > 0 && (
+      {result.passed.filter((p) => !UNVERIFIABLE_IDS.has(p.id)).length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-200 p-8 mb-6">
           <h2 className="text-xl font-bold mb-4 text-green-700">
-            ✓ Пройдено успешно — {result.passed.length} из {result.rulesChecked} проверок
+            ✓ Пройдено успешно — {result.passed.filter((p) => !UNVERIFIABLE_IDS.has(p.id)).length} из {result.rulesChecked} проверок
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {result.passed.map((p) => (
+            {result.passed.filter((p) => !UNVERIFIABLE_IDS.has(p.id)).map((p) => (
               <PassedCard key={p.id} p={p} />
             ))}
           </div>
@@ -249,19 +249,74 @@ export function ResultDisplay({ result, onReset, onCheckPro, proLoading, proErro
   );
 }
 
+// Правила, которые нельзя надёжно проверить автоматически:
+// реестр РКН, местонахождение серверов, трафик
+const UNVERIFIABLE_IDS = new Set([
+  "pd-localization",
+  "pd-roskomnadzor",
+  "rkn-blogger",
+  "zpp-return",   // старые правила — заменены на return-policy-missing
+  "zpp-warranty",
+]);
+
 const PASSED_LABEL: Record<string, string> = {
-  "google-analytics": "Google Analytics не подключён",
+  // Персональные данные — что реально найдено в HTML
+  "pd-policy": "Политика конфиденциальности найдена",
+  "pd-policy-link": "Политика доступна с главной страницы",
+  "pd-consent": "Нарушений по согласию на обработку ПДн не выявлено",
+  "pd-cross-border": "Иностранных сервисов с передачей ПДн не найдено",
+  "pd-localization": "Явных признаков хранения ПДн за рубежом не выявлено",
+  "pd-roskomnadzor": "Нарушений по регистрации в реестре операторов не выявлено",
+  // Cookies
+  "cookie-banner": "Cookie-баннер обнаружен",
+  "cookie-russian": "Нарушений по языку cookie-баннера не выявлено",
+  "cookie-passive": "Нарушений по пассивной установке cookies не выявлено",
+  // Иностранные сервисы
+  "google-analytics": "Google Analytics не обнаружен",
   "google-fonts": "Google Fonts не используется",
-  "facebook-pixel": "Facebook Pixel не установлен",
-  "meta-links": "Ссылки на Meta-сервисы оформлены корректно или отсутствуют",
-  "pd-policy": "Политика конфиденциальности присутствует",
-  "cookie-banner": "Cookie-баннер найден",
-  "ssl": "Сайт работает по HTTPS",
-  "age-marker": "Возрастная маркировка присутствует",
-  "lang-headers": "Навигация на русском языке",
+  "facebook-pixel": "Facebook Pixel не обнаружен",
+  "meta-links": "Ссылок на Meta-сервисы без пометки не найдено",
+  "meta-ads-pixel": "Facebook/Meta Pixel не обнаружен",
+  "meta-logo": "Логотипов Instagram/Facebook на странице не найдено",
+  "meta-links-text": "Текстовых упоминаний Meta-сервисов без пометки не найдено",
+  // Реклама
+  "ad-marker": "Рекламы без маркировки на проверенных страницах не найдено",
+  "ad-best": "Недостоверных превосходных степеней на проверенных страницах не найдено",
+  "ad-medical": "Рекламы медуслуг без предупреждений на проверенных страницах не найдено",
+  // Государственный язык
   "lang-anglicisms": "Англицизмы в заголовках не обнаружены",
-  "req-inn": "ИНН организации указан",
-  "pd-cross-border": "Иностранные сервисы с ПДн не обнаружены",
+  "lang-headers": "Навигация на русском языке",
+  // Реквизиты
+  "req-company": "Наименование организации найдено",
+  "req-inn": "ИНН организации найден",
+  "req-address": "Адрес юрлица найден",
+  "requisites-missing": "ИНН, ОГРН и наименование юр.лица найдены",
+  "contacts-missing": "Контактная информация (телефон или email) найдена",
+  // Договоры
+  "offer": "Нарушений по публичной оферте не выявлено",
+  "user-agreement": "Нарушений по пользовательскому соглашению не выявлено",
+  "offer-missing": "Оферта или условия продажи найдены",
+  "return-policy-missing": "Условия возврата найдены",
+  "prices-currency": "Цены указаны в рублях",
+  // Права потребителей
+  "zpp-return": "Нарушений по условиям возврата не выявлено",
+  "zpp-warranty": "Нарушений по гарантийным обязательствам не выявлено",
+  // Доступность
+  "a11y-version": "Нарушений по доступности для слабовидящих не выявлено",
+  // Возрастная маркировка
+  "age-marker": "Возрастная маркировка найдена",
+  // Реестры РКН
+  "rkn-blogger": "Признаков обязательной регистрации как СМИ/блогер не выявлено",
+  // Запрещённые упоминания
+  "extremist": "Упоминаний запрещённых организаций без пометки не найдено",
+  // Обратная связь
+  "contact-form": "Нарушений по ссылкам на политику ПДн в формах не выявлено",
+  // Запрещённый контент
+  "lgbt": "ЛГБТ-контента на проверенных страницах не найдено",
+  "drugs": "Информации о наркотиках на проверенных страницах не найдено",
+  "suicide": "Описаний суицида на проверенных страницах не найдено",
+  // Безопасность
+  "ssl": "Сайт работает по HTTPS",
 };
 
 function PassedCard({ p }: { p: PassedRule }) {

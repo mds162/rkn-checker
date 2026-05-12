@@ -47,6 +47,21 @@ ${LAWS.map((l) => `- ${l.id}: ${l.title} | ${l.law} | штраф ${l.fineMin}–
    - Если detected: false → вероятное нарушение cookie-banner (если нет признаков кастомного баннера)
    - Если isCustom: true → предупреди, но не считай автоматически нарушением
 
+6. ЗАКОН О ЗАЩИТЕ ПРАВ ПОТРЕБИТЕЛЕЙ (ЗоЗПП) — только если сайт коммерческий:
+   - Определи коммерческий ли сайт: есть кнопки «купить»/«в корзину», ценники, каталог товаров
+   - Если коммерческий — проверь:
+     * requisites-missing: ИНН, ОГРН/ОГРНИП, КПП, юридический адрес, полное наименование
+     * contacts-missing: телефон или email
+     * offer-missing: публичная оферта или пользовательское соглашение (ссылка в footer)
+     * return-policy-missing: условия возврата (только для интернет-магазинов с корзиной)
+     * prices-currency: цены в рублях (если есть цены в $ или € без рублёвого эквивалента)
+   - Если сайт некоммерческий (блог, визитка, портфолио) — правила offer-missing, return-policy-missing, prices-currency НЕ применяются
+
+7. META-символика:
+   - meta-logo: найди логотипы/иконки Instagram/Facebook (fa-instagram, fa-facebook, файлы .../instagram.svg)
+   - meta-ads-pixel: найди Facebook Pixel (connect.facebook.net, fbq())
+   - meta-links-text: найди текстовые упоминания Instagram/Facebook без пометки об экстремизме
+
 Правила оценки severity:
 - critical: штраф > 1 млн ₽
 - high: 300к–1 млн ₽
@@ -67,6 +82,16 @@ function truncate(text: string | undefined, maxChars: number): string {
   return text.length > maxChars ? text.slice(0, maxChars) + "\n[обрезано...]" : text;
 }
 
+// Вырезает <script> и <style> теги из HTML перед отправкой в Claude.
+// Скрипты занимают 60–80% типичного HTML-файла, но бесполезны для анализа контента.
+// Это позволяет покрыть в 3–4x больше реального текста в том же лимите токенов.
+function stripScriptsAndStyles(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/\s{3,}/g, "\n");
+}
+
 export async function analyzeWithClaude(
   pages: SitePages,
   cmp: CmpResult,
@@ -81,10 +106,12 @@ export async function analyzeWithClaude(
 
   const formSummary = `Всего форм: ${forms.totalForms}, собирают ПДн: ${forms.pdFormsCount}, без согласия: ${forms.formsWithoutConsent}, предзаполненные галочки: ${forms.formsWithPreCheckedConsent}, без ссылки на политику: ${forms.formsWithoutPolicyLink}`;
 
+  const cleanedHomepage = stripScriptsAndStyles(pages.homepage.html);
+
   const userContent = `URL: ${pages.homepage.url}
 
-=== ГЛАВНАЯ СТРАНИЦА (HTML, первые 200 КБ) ===
-${truncate(pages.homepage.html, 200_000)}
+=== ГЛАВНАЯ СТРАНИЦА (HTML без скриптов/стилей, до 300 КБ) ===
+${truncate(cleanedHomepage, 300_000)}
 
 === ПОЛИТИКА КОНФИДЕНЦИАЛЬНОСТИ ===
 URL: ${pages.policy?.url ?? "не найдена"}
@@ -98,6 +125,14 @@ ${truncate(pages.terms?.content, 15_000)}
 === СТРАНИЦА КОНТАКТОВ / О КОМПАНИИ ===
 URL: ${pages.contacts?.url ?? "не найдена"}
 ${truncate(pages.contacts?.content, 15_000)}
+
+=== ПУБЛИЧНАЯ ОФЕРТА / УСЛОВИЯ ПРОДАЖИ ===
+URL: ${pages.offer?.url ?? "не найдена"}
+${truncate(pages.offer?.content, 10_000)}
+
+=== УСЛОВИЯ ВОЗВРАТА ===
+URL: ${pages.returnPolicy?.url ?? "не найдена"}
+${truncate(pages.returnPolicy?.content, 10_000)}
 
 === CMP (Cookie Management Platform) ===
 ${cmpSummary}

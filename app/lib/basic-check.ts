@@ -1,18 +1,21 @@
 import { LAWS } from "./laws";
+import { detectCommercial } from "./commercial-detector";
 import type { CheckResult, PassedRule, Violation } from "./types";
 
 const QUICK_RULE_IDS = [
   "google-analytics",
   "google-fonts",
-  "facebook-pixel",
-  "meta-links",
+  "meta-ads-pixel",
+  "meta-logo",
+  "meta-links-text",
   "pd-policy",
   "cookie-banner",
   "ssl",
   "age-marker",
   "lang-headers",
   "lang-anglicisms",
-  "req-inn",
+  "requisites-missing",
+  "contacts-missing",
   "pd-cross-border",
 ];
 
@@ -50,29 +53,44 @@ export function basicCheckHtml(url: string, html: string): CheckResult {
     add("google-fonts", `Найдена ссылка на Google Fonts: «${gfMatch[0]}»`, "high");
   }
 
-  // 3. Facebook Pixel
-  const fbMatch = html.match(/connect\.facebook\.net|fbq\s*\(/i);
-  if (fbMatch) {
-    add("facebook-pixel", "Найден код Facebook Pixel", "high");
+  // 3. Meta Ads Pixel (бывший facebook-pixel) — HIGH риск
+  const fbPixelMatch = html.match(/connect\.facebook\.net|fbq\s*\(/i);
+  if (fbPixelMatch) {
+    add("meta-ads-pixel", "Найден код Facebook/Meta Pixel — индикатор рекламной активности в запрещённой соцсети", "critical");
   }
 
-  // 4. Ссылки на Meta-сервисы без пометки об экстремизме
-  const metaLinkMatch = html.match(/<a\s[^>]*href=["'][^"']*(?:instagram\.com|facebook\.com)[^"']*["']/i);
-  if (metaLinkMatch) {
-    const hasDiclaimer = /экстремистск/i.test(html);
-    if (!hasDiclaimer) {
-      const domain = metaLinkMatch[0].includes("instagram") ? "instagram.com" : "facebook.com";
-      add("meta-links", `Ссылка на ${domain} без пометки об экстремистской организации`, "medium");
+  // 4. Meta Logo — логотипы/иконки Instagram/Facebook — HIGH риск
+  const metaLogoMatch = html.match(
+    /fa-instagram|fa-facebook|bi-instagram|bi-facebook|icon-instagram|icon-facebook|fab fa-instagram|fab fa-facebook|instagram\.svg|instagram\.png|instagram\.webp|facebook\.svg|facebook\.png|facebook\.webp|\/ig\.svg|\/fb\.svg|ig-icon|fb-icon|aria-label=["']Instagram["']|aria-label=["']Facebook["']|<title[^>]*>Instagram|<title[^>]*>Facebook/i
+  );
+  if (metaLogoMatch) {
+    add("meta-logo", `Найдена символика Meta (логотип/иконка): «${metaLogoMatch[0].slice(0, 80)}»`, "high");
+  }
+
+  // 5. Текстовые упоминания Instagram/Facebook без пометки об экстремизме — LOW риск
+  // Ищем только в видимом тексте (не в href/src/class/путях к файлам)
+  const metaTextMatch = html.match(/>([^<]*(?:instagram|facebook)[^<]*)</i);
+  if (metaTextMatch) {
+    const textContext = metaTextMatch[1];
+    // Проверяем что это не путь к файлу и не атрибут
+    const isFilePath = /\.(svg|png|jpg|webp|js|css)/i.test(textContext);
+    if (!isFilePath) {
+      const surroundingStart = Math.max(0, html.indexOf(metaTextMatch[0]) - 500);
+      const surrounding = html.slice(surroundingStart, surroundingStart + 1000);
+      const hasDisclaimer = /экстремистск|запрещена|признана экстремистской/i.test(surrounding);
+      if (!hasDisclaimer) {
+        add("meta-links-text", `Упоминание Meta-сервиса без пометки об экстремизме: «${textContext.trim().slice(0, 80)}»`, "low");
+      }
     }
   }
 
-  // 5. Политика конфиденциальности
+  // 6. Политика конфиденциальности
   const privacyLink = /<a\s[^>]*>[^<]*(?:политика конфиденциальности|политика обработки|обработка персональных|privacy policy|privacy)[^<]*<\/a>/i.test(html);
   if (!privacyLink) {
     add("pd-policy", "На странице не найдено ссылок на политику конфиденциальности", "high");
   }
 
-  // 6. Cookie-баннер
+  // 7. Cookie-баннер
   const hasCookieWord = /cookie|куки/i.test(html);
   if (hasCookieWord) {
     const cookieIdx = html.search(/cookie|куки/i);
@@ -85,18 +103,18 @@ export function basicCheckHtml(url: string, html: string): CheckResult {
     add("cookie-banner", "Не найден баннер согласия на cookies", "high");
   }
 
-  // 7. SSL
+  // 8. SSL
   if (!url.startsWith("https://")) {
     add("ssl", "Сайт не использует HTTPS", "high");
   }
 
-  // 8. Возрастная маркировка
+  // 9. Возрастная маркировка
   const hasAgeMarker = /\b(0|6|12|16|18)\+/.test(html);
   if (!hasAgeMarker) {
     add("age-marker", "На странице не найдена возрастная маркировка (0+, 6+, 12+, 16+, 18+)", "medium");
   }
 
-  // 9. Навигация на иностранном языке
+  // 10. Навигация на иностранном языке
   const navMatches = html.match(/<(?:nav|header)[^>]*>([\s\S]*?)<\/(?:nav|header)>/gi) ?? [];
   const aMatches = html.match(/<a\s[^>]*>[\s\S]*?<\/a>/gi)?.slice(0, 5) ?? [];
   const navText = [...navMatches, ...aMatches].join(" ").replace(/<[^>]+>/g, " ");
@@ -109,7 +127,7 @@ export function basicCheckHtml(url: string, html: string): CheckResult {
     }
   }
 
-  // 10. Англицизмы
+  // 11. Англицизмы
   const anglicismWords = ["sale", "new", "premium", "contact us", "subscribe", "buy now", "more info"];
   const foundAnglicisms: string[] = [];
   const uiTags = html.match(/<(?:button|h1|h2)[^>]*>[\s\S]*?<\/(?:button|h1|h2)>|<a\s[^>]*class=["'][^"']*btn[^"']*["'][^>]*>[\s\S]*?<\/a>/gi) ?? [];
@@ -121,20 +139,60 @@ export function basicCheckHtml(url: string, html: string): CheckResult {
     add("lang-anglicisms", `Найдены англицизмы: ${foundAnglicisms.join(", ")}`, "medium");
   }
 
-  // 11. ИНН
-  const hasInn = /ИНН\s*[:：]?\s*\d{10,12}/i.test(html);
-  if (!hasInn) {
-    add("req-inn", "На странице не найден ИНН организации", "low");
+  // 12. Реквизиты юр.лица (ИНН + ОГРН + название)
+  const innRegex = /\bИНН[:\s]*(\d{10}|\d{12})\b/i;
+  const ogrnRegex = /\bОГРН(?:ИП)?[:\s]*(\d{13}|\d{15})\b/i;
+  const legalNameRegex = /\b(ООО|АО|ПАО|ИП|ОАО|ЗАО)\s+["«][^"»]{2,}["»]/;
+  const hasInn = innRegex.test(html);
+  const hasOgrn = ogrnRegex.test(html);
+  const hasLegalName = legalNameRegex.test(html);
+  if (!hasInn || !hasOgrn || !hasLegalName) {
+    const missing = [
+      !hasInn && "ИНН",
+      !hasOgrn && "ОГРН",
+      !hasLegalName && "название юр.лица (ООО/ИП/АО)"
+    ].filter(Boolean).join(", ");
+    add("requisites-missing", `Не найдено на странице: ${missing}`, "medium");
   }
 
-  // 12. Трансграничная передача ПДн (если есть иностранные сервисы)
-  const hasForeignService = gaMatch || gfMatch || fbMatch;
+  // 13. Контакты (телефон или email)
+  const phoneRegex = /(?:\+7|8)[\s\-()]?\d{3}[\s\-()]?\d{3}[\s\-()]?\d{2}[\s\-()]?\d{2}/;
+  const emailRegex = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i;
+  if (!phoneRegex.test(html) && !emailRegex.test(html)) {
+    add("contacts-missing", "Не найден ни телефон, ни email на главной странице", "low");
+  }
+
+  // 14. Трансграничная передача ПДн (если есть иностранные сервисы)
+  const hasForeignService = gaMatch || gfMatch || fbPixelMatch;
   if (hasForeignService) {
     add(
       "pd-cross-border",
       "Используются иностранные сервисы (Google/Meta) — нужно согласие на трансграничную передачу ПДн",
       "critical"
     );
+  }
+
+  // 15. ЗоЗПП-проверки (только для коммерческих сайтов)
+  const commercial = detectCommercial(html);
+  if (commercial.isCommercial) {
+    const rubPriceRegex = /(\d[\d\s]{0,10})\s*(₽|руб\.?|RUB)/;
+    const foreignCurrencyRegex = /(\d[\d\s]{0,10})\s*(\$|€|USD|EUR|у\.\s?е\.)/;
+    if (foreignCurrencyRegex.test(html) && !rubPriceRegex.test(html)) {
+      add("prices-currency", "Найдены цены в иностранной валюте без рублёвого эквивалента", "low");
+    }
+
+    if (!/<a[^>]*>[^<]*(?:оферт|условия использования|пользовательское соглашение|публичный договор)/i.test(html)) {
+      add("offer-missing", "На сайте не найдена ссылка на оферту или условия продажи", "medium");
+    }
+
+    const hasEcommerceSignal = commercial.signals.some(
+      (s) => s.includes("корзин") || s.includes("e-commerce") || s.includes("Элементы корзины")
+    );
+    if (hasEcommerceSignal) {
+      if (!/<a[^>]*>[^<]*(?:возврат|обмен|гарантия товар)/i.test(html)) {
+        add("return-policy-missing", "Не найдена страница с условиями возврата товара", "medium");
+      }
+    }
   }
 
   const violatedIds = new Set(violations.map((v) => v.id));
