@@ -290,6 +290,14 @@ function ViolationCard({ violation }: { violation: Violation }) {
           <Text style={styles.fineLabel}>Штраф для юр. лица:</Text>
           <Text style={styles.fineValue}>{formatFine(violation.fineMin)} – {formatFine(violation.fineMax)}</Text>
         </View>
+        {violation.fineMinIp != null && violation.fineMaxIp != null && (
+          <View style={[styles.fineRow, { marginTop: -2, marginBottom: 4 }]}>
+            <Text style={[styles.fineLabel, { color: BRAND_COLORS.textTertiary }]}>для ИП:</Text>
+            <Text style={[styles.fineValue, { color: BRAND_COLORS.textTertiary, fontWeight: 400 }]}>
+              {formatFine(violation.fineMinIp)} – {formatFine(violation.fineMaxIp)}
+            </Text>
+          </View>
+        )}
         {violation.enforcementNote && (
           <View style={styles.enforcementBlock}>
             <Text style={styles.enforcementTitle}>Реальная практика</Text>

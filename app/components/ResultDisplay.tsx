@@ -367,8 +367,15 @@ function ViolationCard({ v }: { v: Violation }) {
         Категория: {v.category} · {v.law}
       </div>
       <div className="text-sm mb-3 italic text-gray-700">{v.evidence}</div>
-      <div className="font-semibold text-gray-900">
-        Штраф: {fmt(v.fineMin)} – {fmt(v.fineMax)}
+      <div>
+        <div className="font-semibold text-gray-900">
+          Штраф для юр. лица: {fmt(v.fineMin)} – {fmt(v.fineMax)}
+        </div>
+        {v.fineMinIp != null && v.fineMaxIp != null && (
+          <div className="text-sm text-gray-500 mt-0.5">
+            для ИП: {fmt(v.fineMinIp)} – {fmt(v.fineMaxIp)}
+          </div>
+        )}
       </div>
       {v.enforcementNote && (
         <div className="mt-3 text-xs text-gray-500 border-t border-gray-200 pt-2">

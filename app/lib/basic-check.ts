@@ -33,6 +33,8 @@ export function basicCheckHtml(url: string, html: string): CheckResult {
       law: rule.law,
       fineMin: rule.fineMin,
       fineMax: rule.fineMax,
+      fineMinIp: rule.fineMinIp,
+      fineMaxIp: rule.fineMaxIp,
       evidence,
       severity,
       realRiskLevel: rule.realRiskLevel,

@@ -168,6 +168,8 @@ ${formSummary}`;
         law: rule.law,
         fineMin: rule.fineMin,
         fineMax: rule.fineMax,
+        fineMinIp: rule.fineMinIp,
+        fineMaxIp: rule.fineMaxIp,
         evidence: v.evidence,
         severity: v.severity,
         realRiskLevel: rule.realRiskLevel,

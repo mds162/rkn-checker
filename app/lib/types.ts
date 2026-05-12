@@ -5,6 +5,8 @@ export type Violation = {
   law: string;
   fineMin: number;
   fineMax: number;
+  fineMinIp?: number;
+  fineMaxIp?: number;
   evidence: string;
   severity: "low" | "medium" | "high" | "critical";
   realRiskLevel?: "high" | "medium" | "low";
