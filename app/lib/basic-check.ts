@@ -108,14 +108,23 @@ export function basicCheckHtml(url: string, html: string): CheckResult {
   }
 
   // 10. Навигация на иностранном языке
+  const stripTagsAndCode = (s: string) =>
+    s.replace(/<style[\s\S]*?<\/style>/gi, "")
+     .replace(/<script[\s\S]*?<\/script>/gi, "")
+     .replace(/<[^>]+>/g, " ")
+     .replace(/[{};:#.@][\s\S]{0,200}/g, " ") // остатки CSS/JS
+     .replace(/\s+/g, " ")
+     .trim();
+
   const navMatches = html.match(/<(?:nav|header)[^>]*>([\s\S]*?)<\/(?:nav|header)>/gi) ?? [];
-  const aMatches = html.match(/<a\s[^>]*>[\s\S]*?<\/a>/gi)?.slice(0, 5) ?? [];
-  const navText = [...navMatches, ...aMatches].join(" ").replace(/<[^>]+>/g, " ");
-  if (navText.trim().length > 20) {
+  const aMatches = html.match(/<a\s[^>]*>[\s\S]*?<\/a>/gi)?.slice(0, 10) ?? [];
+  const navText = stripTagsAndCode([...navMatches, ...aMatches].join(" "));
+
+  if (navText.length > 20) {
     const cyrillicCount = (navText.match(/[а-яёА-ЯЁ]/g) ?? []).length;
     const letterCount = (navText.match(/[a-zA-Zа-яёА-ЯЁ]/g) ?? []).length;
     if (letterCount > 10 && cyrillicCount / letterCount < 0.2) {
-      const sample = navText.replace(/\s+/g, " ").trim().slice(0, 80);
+      const sample = navText.slice(0, 80);
       add("lang-headers", `В навигации преобладают слова на иностранном языке: «${sample}»`, "medium");
     }
   }
