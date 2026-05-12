@@ -1,38 +1,56 @@
 import { NextResponse } from "next/server";
 import { fetchSiteHtml, normalizeUrl } from "@/app/lib/fetch-site";
 import { analyzeWithClaude } from "@/app/lib/claude";
-import { buildDemoResult } from "@/app/lib/demo";
+import { basicCheckHtml } from "@/app/lib/basic-check";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
   let url = "";
+  let mode: "quick" | "pro" = "quick";
+
   try {
-    const body = (await req.json()) as { url?: string };
+    const body = (await req.json()) as { url?: string; mode?: string };
     if (!body.url) {
       return NextResponse.json({ error: "URL не указан" }, { status: 400 });
     }
     url = normalizeUrl(body.url);
+    if (body.mode === "pro") mode = "pro";
   } catch {
     return NextResponse.json({ error: "Некорректный адрес сайта" }, { status: 400 });
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-
-  // Демо-режим, если ключа нет — возвращаем заранее заготовленный набор.
-  if (!apiKey) {
-    return NextResponse.json(buildDemoResult(url));
+  if (mode === "pro") {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "AI-режим временно недоступен: API-ключ не настроен" },
+        { status: 503 }
+      );
+    }
+    try {
+      const { html, finalUrl } = await fetchSiteHtml(url, { maxBytes: 200000 });
+      const result = await analyzeWithClaude(finalUrl, html, apiKey);
+      return NextResponse.json(result);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Неизвестная ошибка";
+      return NextResponse.json(
+        { error: `Не удалось проанализировать сайт: ${message}` },
+        { status: 500 }
+      );
+    }
   }
 
+  // Quick mode
   try {
     const { html, finalUrl } = await fetchSiteHtml(url);
-    const result = await analyzeWithClaude(finalUrl, html, apiKey);
+    const result = basicCheckHtml(finalUrl, html);
     return NextResponse.json(result);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Неизвестная ошибка";
     return NextResponse.json(
-      { error: `Не удалось проанализировать сайт: ${message}` },
+      { error: `Не удалось загрузить сайт: ${message}` },
       { status: 500 }
     );
   }

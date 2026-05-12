@@ -1,4 +1,7 @@
-export async function fetchSiteHtml(url: string): Promise<{ html: string; finalUrl: string }> {
+export async function fetchSiteHtml(
+  url: string,
+  options?: { maxBytes?: number }
+): Promise<{ html: string; finalUrl: string }> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
@@ -15,7 +18,8 @@ export async function fetchSiteHtml(url: string): Promise<{ html: string; finalU
       throw new Error(`Сайт ответил кодом ${response.status}`);
     }
     const html = await response.text();
-    return { html: html.slice(0, 200000), finalUrl: response.url };
+    const maxBytes = options?.maxBytes ?? Infinity;
+    return { html: html.slice(0, maxBytes), finalUrl: response.url };
   } finally {
     clearTimeout(timeout);
   }

@@ -12,7 +12,7 @@ export type Violation = {
 export type CheckResult = {
   url: string;
   checkedAt: string;
-  mode: "demo" | "ai";
+  mode: "quick" | "pro";
   violations: Violation[];
   totalFineMin: number;
   totalFineMax: number;

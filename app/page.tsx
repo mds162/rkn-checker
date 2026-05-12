@@ -40,7 +40,7 @@ export default function Home() {
       </div>
 
       <footer className="mt-20 text-center text-sm text-gray-500">
-        © {new Date().getFullYear()} RKN Checker · Демо-проект на Next.js + Claude
+        © {new Date().getFullYear()} RKN Checker · Next.js + Claude AI
       </footer>
     </main>
   );

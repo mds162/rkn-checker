@@ -36,12 +36,11 @@ export function ResultDisplay({ result, onReset }: Props) {
 
   return (
     <div className="w-full max-w-4xl mx-auto py-12 px-4">
-      {result.mode === "demo" && (
-        <div className="mb-6 p-4 bg-amber-50 border border-amber-300 rounded-lg text-amber-900 text-sm">
-          <strong>Демо-режим.</strong> Показан пример результата. Для реального ИИ-анализа
-          добавьте ключ Anthropic API в файл <code className="bg-white px-1 rounded">.env.local</code>.
-        </div>
-      )}
+      <div className="mb-6 p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-600 text-sm">
+        {result.mode === "quick"
+          ? "⚡ Быстрая проверка по 12 правилам (regex). Для полного анализа используйте режим «Полная проверка через AI»."
+          : "🤖 Полная проверка через AI по 36 правилам."}
+      </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 mb-6">
         <div className="text-sm text-gray-500 mb-2">Проверен сайт</div>

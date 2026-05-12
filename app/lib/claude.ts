@@ -76,7 +76,7 @@ export async function analyzeWithClaude(
   return {
     url,
     checkedAt: new Date().toISOString(),
-    mode: "ai",
+    mode: "pro",
     violations,
     totalFineMin,
     totalFineMax,
