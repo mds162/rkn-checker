@@ -67,15 +67,17 @@ export function basicCheckHtml(url: string, html: string): CheckResult {
   }
 
   // 5. Текстовые упоминания Instagram/Facebook без пометки об экстремизме — LOW риск
-  // Ищем только в видимом тексте (не в href/src/class/путях к файлам)
-  const metaTextMatch = html.match(/>([^<]*(?:instagram|facebook)[^<]*)</i);
+  // Ищем только в видимом тексте — вырезаем скрипты/стили перед поиском
+  const htmlNoScripts = html
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "");
+  const metaTextMatch = htmlNoScripts.match(/>([^<]*(?:instagram|facebook)[^<]*)</i);
   if (metaTextMatch) {
     const textContext = metaTextMatch[1];
-    // Проверяем что это не путь к файлу и не атрибут
     const isFilePath = /\.(svg|png|jpg|webp|js|css)/i.test(textContext);
     if (!isFilePath) {
-      const surroundingStart = Math.max(0, html.indexOf(metaTextMatch[0]) - 500);
-      const surrounding = html.slice(surroundingStart, surroundingStart + 1000);
+      const surroundingStart = Math.max(0, htmlNoScripts.indexOf(metaTextMatch[0]) - 500);
+      const surrounding = htmlNoScripts.slice(surroundingStart, surroundingStart + 1000);
       const hasDisclaimer = /экстремистск|запрещена|признана экстремистской/i.test(surrounding);
       if (!hasDisclaimer) {
         add("meta-links-text", `Упоминание Meta-сервиса без пометки об экстремизме: «${textContext.trim().slice(0, 80)}»`, "low");
