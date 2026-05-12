@@ -6,7 +6,15 @@ export type LawRule = {
   fineMin: number;
   fineMax: number;
   howToCheck: string;
+  realRiskLevel: "high" | "medium" | "low";
+  enforcementNote?: string;
+  lawArticle?: string;
+  lastReviewed?: string;
 };
+
+const NOTE_HIGH = "РКН ведёт автоматический мониторинг сайтов с 2025 года. Штрафы по этой статье назначаются в судах в 2025–2026 годах регулярно.";
+const NOTE_MEDIUM = "Юридический риск реальный, но массовых проверок РКН по этому составу пока не зафиксировано. Рекомендуется устранить как профилактическая мера.";
+const NOTE_LOW = "Нарушение формальное, штрафы крайне редки. Имеет смысл устранить для общего качества, но риск проверки минимальный.";
 
 export const LAWS: LawRule[] = [
   // 1. Персональные данные (152-ФЗ)
@@ -15,27 +23,39 @@ export const LAWS: LawRule[] = [
     category: "Персональные данные",
     title: "Отсутствует политика обработки персональных данных",
     law: "ст. 18.1 ФЗ-152",
-    fineMin: 30000,
-    fineMax: 60000,
+    fineMin: 60000,
+    fineMax: 100000,
     howToCheck: "Найти ссылку «Политика конфиденциальности» / «Политика обработки персональных данных»",
+    realRiskLevel: "high",
+    enforcementNote: NOTE_HIGH,
+    lawArticle: "ч. 3 ст. 13.11 КоАП РФ",
+    lastReviewed: "2026-05",
   },
   {
     id: "pd-policy-link",
     category: "Персональные данные",
     title: "Политика опубликована, но недоступна с главной страницы",
     law: "ч. 2 ст. 18.1 ФЗ-152",
-    fineMin: 15000,
-    fineMax: 30000,
+    fineMin: 60000,
+    fineMax: 100000,
     howToCheck: "Ссылка должна быть в футере или подвале каждой страницы",
+    realRiskLevel: "medium",
+    enforcementNote: NOTE_MEDIUM,
+    lawArticle: "ч. 3 ст. 13.11 КоАП РФ",
+    lastReviewed: "2026-05",
   },
   {
     id: "pd-consent",
     category: "Персональные данные",
     title: "Нет согласия на обработку ПДн при отправке формы",
     law: "ст. 9 ФЗ-152",
-    fineMin: 30000,
-    fineMax: 150000,
+    fineMin: 300000,
+    fineMax: 700000,
     howToCheck: "У форм с телефоном/email должен быть чекбокс согласия и ссылка на политику",
+    realRiskLevel: "high",
+    enforcementNote: NOTE_HIGH,
+    lawArticle: "ч. 1 ст. 13.11 КоАП РФ",
+    lastReviewed: "2026-05",
   },
   {
     id: "pd-cross-border",
@@ -45,6 +65,10 @@ export const LAWS: LawRule[] = [
     fineMin: 1000000,
     fineMax: 6000000,
     howToCheck: "Если используются Google/иностранные сервисы — нужно отдельное согласие",
+    realRiskLevel: "high",
+    enforcementNote: NOTE_HIGH,
+    lawArticle: "ч. 8 ст. 13.11 КоАП РФ",
+    lastReviewed: "2026-05",
   },
   {
     id: "pd-localization",
@@ -54,15 +78,23 @@ export const LAWS: LawRule[] = [
     fineMin: 1000000,
     fineMax: 6000000,
     howToCheck: "Хостинг и базы данных должны быть на территории РФ",
+    realRiskLevel: "high",
+    enforcementNote: NOTE_HIGH,
+    lawArticle: "ч. 8 ст. 13.11 КоАП РФ",
+    lastReviewed: "2026-05",
   },
   {
     id: "pd-roskomnadzor",
     category: "Персональные данные",
     title: "Сайт не зарегистрирован в реестре операторов ПДн",
     law: "ч. 1 ст. 22 ФЗ-152",
-    fineMin: 30000,
-    fineMax: 50000,
+    fineMin: 100000,
+    fineMax: 300000,
     howToCheck: "Юрлицо/ИП должно быть в реестре Роскомнадзора",
+    realRiskLevel: "medium",
+    enforcementNote: NOTE_MEDIUM,
+    lawArticle: "ст. 19.7 КоАП РФ",
+    lastReviewed: "2026-05",
   },
 
   // 2. Cookies
@@ -71,9 +103,13 @@ export const LAWS: LawRule[] = [
     category: "Cookies",
     title: "Отсутствует баннер согласия на использование cookies",
     law: "ст. 9 ФЗ-152",
-    fineMin: 30000,
-    fineMax: 150000,
+    fineMin: 300000,
+    fineMax: 700000,
     howToCheck: "При первом заходе должен быть баннер с кнопкой «Принять»",
+    realRiskLevel: "high",
+    enforcementNote: NOTE_HIGH,
+    lawArticle: "ч. 1 ст. 13.11 КоАП РФ",
+    lastReviewed: "2026-05",
   },
   {
     id: "cookie-russian",
@@ -83,15 +119,23 @@ export const LAWS: LawRule[] = [
     fineMin: 100000,
     fineMax: 500000,
     howToCheck: "Текст должен быть на русском или с переводом",
+    realRiskLevel: "medium",
+    enforcementNote: NOTE_MEDIUM,
+    lawArticle: "ч. 2 ст. 3 ФЗ-53",
+    lastReviewed: "2026-05",
   },
   {
     id: "cookie-passive",
     category: "Cookies",
     title: "Нет активного согласия — cookies ставятся до клика",
     law: "ст. 9 ФЗ-152",
-    fineMin: 60000,
-    fineMax: 300000,
+    fineMin: 300000,
+    fineMax: 700000,
     howToCheck: "До нажатия «Принять» технические/маркетинговые cookies ставиться не должны",
+    realRiskLevel: "high",
+    enforcementNote: NOTE_HIGH,
+    lawArticle: "ч. 1 ст. 13.11 КоАП РФ",
+    lastReviewed: "2026-05",
   },
 
   // 3. Иностранные трекеры и сервисы
@@ -103,6 +147,10 @@ export const LAWS: LawRule[] = [
     fineMin: 1000000,
     fineMax: 6000000,
     howToCheck: "Найти скрипт gtag, google-analytics.com, googletagmanager.com",
+    realRiskLevel: "high",
+    enforcementNote: NOTE_HIGH,
+    lawArticle: "ч. 8 ст. 13.11 КоАП РФ",
+    lastReviewed: "2026-05",
   },
   {
     id: "google-fonts",
@@ -112,6 +160,10 @@ export const LAWS: LawRule[] = [
     fineMin: 60000,
     fineMax: 300000,
     howToCheck: "Найти ссылки fonts.googleapis.com или fonts.gstatic.com",
+    realRiskLevel: "medium",
+    enforcementNote: NOTE_MEDIUM,
+    lawArticle: "ч. 1 ст. 13.11 КоАП РФ",
+    lastReviewed: "2026-05",
   },
   {
     id: "facebook-pixel",
@@ -121,6 +173,10 @@ export const LAWS: LawRule[] = [
     fineMin: 100000,
     fineMax: 500000,
     howToCheck: "Найти connect.facebook.net, fbq()",
+    realRiskLevel: "medium",
+    enforcementNote: NOTE_MEDIUM,
+    lawArticle: "ФЗ-114",
+    lastReviewed: "2026-05",
   },
   {
     id: "meta-links",
@@ -130,6 +186,10 @@ export const LAWS: LawRule[] = [
     fineMin: 4000,
     fineMax: 50000,
     howToCheck: "При упоминании Instagram/Facebook нужна пометка «принадлежит Meta, признана экстремистской и запрещена в РФ»",
+    realRiskLevel: "low",
+    enforcementNote: NOTE_LOW,
+    lawArticle: "ст. 13.15 ч. 11 КоАП РФ",
+    lastReviewed: "2026-05",
   },
 
   // 4. Рекламное законодательство
@@ -141,6 +201,10 @@ export const LAWS: LawRule[] = [
     fineMin: 200000,
     fineMax: 500000,
     howToCheck: "У всех рекламных блоков должна быть пометка «Реклама» и erid-токен",
+    realRiskLevel: "high",
+    enforcementNote: NOTE_HIGH,
+    lawArticle: "ст. 14.3 ч. 16 КоАП РФ",
+    lastReviewed: "2026-05",
   },
   {
     id: "ad-best",
@@ -150,6 +214,10 @@ export const LAWS: LawRule[] = [
     fineMin: 100000,
     fineMax: 500000,
     howToCheck: "Превосходные степени без ссылки на исследование запрещены",
+    realRiskLevel: "medium",
+    enforcementNote: NOTE_MEDIUM,
+    lawArticle: "ст. 14.3 ч. 1 КоАП РФ",
+    lastReviewed: "2026-05",
   },
   {
     id: "ad-medical",
@@ -159,6 +227,10 @@ export const LAWS: LawRule[] = [
     fineMin: 200000,
     fineMax: 500000,
     howToCheck: "Должна быть фраза о консультации специалиста и противопоказаниях",
+    realRiskLevel: "high",
+    enforcementNote: NOTE_HIGH,
+    lawArticle: "ст. 14.3.1 КоАП РФ",
+    lastReviewed: "2026-05",
   },
 
   // 5. Государственный язык
@@ -170,6 +242,10 @@ export const LAWS: LawRule[] = [
     fineMin: 40000,
     fineMax: 100000,
     howToCheck: "Слова типа sale, new, premium, contact us — нужны переводы или замена",
+    realRiskLevel: "low",
+    enforcementNote: NOTE_LOW,
+    lawArticle: "ст. 28.1 ФЗ-53",
+    lastReviewed: "2026-05",
   },
   {
     id: "lang-headers",
@@ -179,6 +255,10 @@ export const LAWS: LawRule[] = [
     fineMin: 40000,
     fineMax: 100000,
     howToCheck: "Меню «Home / About / Contacts» — нарушение",
+    realRiskLevel: "low",
+    enforcementNote: NOTE_LOW,
+    lawArticle: "ч. 2 ст. 3 ФЗ-53",
+    lastReviewed: "2026-05",
   },
 
   // 6. Реквизиты юрлица
@@ -190,6 +270,9 @@ export const LAWS: LawRule[] = [
     fineMin: 5000,
     fineMax: 10000,
     howToCheck: "В подвале должно быть ООО/ИП + полное название",
+    realRiskLevel: "low",
+    enforcementNote: NOTE_LOW,
+    lastReviewed: "2026-05",
   },
   {
     id: "req-inn",
@@ -199,6 +282,9 @@ export const LAWS: LawRule[] = [
     fineMin: 5000,
     fineMax: 10000,
     howToCheck: "В контактах должны быть ИНН и ОГРН",
+    realRiskLevel: "low",
+    enforcementNote: NOTE_LOW,
+    lastReviewed: "2026-05",
   },
   {
     id: "req-address",
@@ -208,6 +294,9 @@ export const LAWS: LawRule[] = [
     fineMin: 5000,
     fineMax: 10000,
     howToCheck: "Адрес регистрации должен быть на странице контактов",
+    realRiskLevel: "low",
+    enforcementNote: NOTE_LOW,
+    lastReviewed: "2026-05",
   },
 
   // 7. Публичная оферта
@@ -219,6 +308,9 @@ export const LAWS: LawRule[] = [
     fineMin: 10000,
     fineMax: 30000,
     howToCheck: "При наличии корзины/оплаты — должна быть оферта",
+    realRiskLevel: "medium",
+    enforcementNote: NOTE_MEDIUM,
+    lastReviewed: "2026-05",
   },
   {
     id: "user-agreement",
@@ -228,6 +320,9 @@ export const LAWS: LawRule[] = [
     fineMin: 10000,
     fineMax: 30000,
     howToCheck: "Особенно для сервисов с регистрацией",
+    realRiskLevel: "medium",
+    enforcementNote: NOTE_MEDIUM,
+    lastReviewed: "2026-05",
   },
 
   // 8. Защита прав потребителей
@@ -239,6 +334,9 @@ export const LAWS: LawRule[] = [
     fineMin: 10000,
     fineMax: 30000,
     howToCheck: "Должен быть раздел про возврат",
+    realRiskLevel: "low",
+    enforcementNote: NOTE_LOW,
+    lastReviewed: "2026-05",
   },
   {
     id: "zpp-warranty",
@@ -248,6 +346,9 @@ export const LAWS: LawRule[] = [
     fineMin: 10000,
     fineMax: 30000,
     howToCheck: "Срок гарантии должен быть указан",
+    realRiskLevel: "low",
+    enforcementNote: NOTE_LOW,
+    lastReviewed: "2026-05",
   },
 
   // 9. Доступность для слабовидящих
@@ -259,6 +360,9 @@ export const LAWS: LawRule[] = [
     fineMin: 30000,
     fineMax: 100000,
     howToCheck: "Кнопка переключения на крупный шрифт / контрастный режим",
+    realRiskLevel: "low",
+    enforcementNote: NOTE_LOW,
+    lastReviewed: "2026-05",
   },
 
   // 10. Возрастная маркировка
@@ -270,6 +374,9 @@ export const LAWS: LawRule[] = [
     fineMin: 20000,
     fineMax: 200000,
     howToCheck: "На главной должен быть знак возраста",
+    realRiskLevel: "medium",
+    enforcementNote: NOTE_MEDIUM,
+    lastReviewed: "2026-05",
   },
 
   // 11. Регистрация в реестре блогеров / Роскомнадзоре
@@ -281,6 +388,9 @@ export const LAWS: LawRule[] = [
     fineMin: 10000,
     fineMax: 300000,
     howToCheck: "При большой посещаемости нужна регистрация",
+    realRiskLevel: "medium",
+    enforcementNote: NOTE_MEDIUM,
+    lastReviewed: "2026-05",
   },
 
   // 12. Упоминание запрещённых организаций
@@ -292,6 +402,9 @@ export const LAWS: LawRule[] = [
     fineMin: 100000,
     fineMax: 500000,
     howToCheck: "Нужна пометка о статусе организации",
+    realRiskLevel: "medium",
+    enforcementNote: NOTE_MEDIUM,
+    lastReviewed: "2026-05",
   },
 
   // 13. Обратная связь и контакты
@@ -300,9 +413,13 @@ export const LAWS: LawRule[] = [
     category: "Обратная связь",
     title: "В формах обратной связи нет ссылки на политику ПДн",
     law: "ст. 9 ФЗ-152",
-    fineMin: 30000,
-    fineMax: 150000,
+    fineMin: 300000,
+    fineMax: 700000,
     howToCheck: "Под кнопкой «Отправить» — текст с согласием и ссылкой",
+    realRiskLevel: "high",
+    enforcementNote: NOTE_HIGH,
+    lawArticle: "ч. 1 ст. 13.11 КоАП РФ",
+    lastReviewed: "2026-05",
   },
 
   // 14. Запрещённый контент
@@ -314,6 +431,9 @@ export const LAWS: LawRule[] = [
     fineMin: 50000,
     fineMax: 5000000,
     howToCheck: "Любые упоминания/символика без явного осуждения",
+    realRiskLevel: "high",
+    enforcementNote: NOTE_HIGH,
+    lastReviewed: "2026-05",
   },
   {
     id: "drugs",
@@ -323,6 +443,9 @@ export const LAWS: LawRule[] = [
     fineMin: 800000,
     fineMax: 1500000,
     howToCheck: "Любые описания, инструкции, ссылки",
+    realRiskLevel: "high",
+    enforcementNote: NOTE_HIGH,
+    lastReviewed: "2026-05",
   },
   {
     id: "suicide",
@@ -332,6 +455,9 @@ export const LAWS: LawRule[] = [
     fineMin: 50000,
     fineMax: 500000,
     howToCheck: "Любые методы и инструкции",
+    realRiskLevel: "high",
+    enforcementNote: NOTE_HIGH,
+    lastReviewed: "2026-05",
   },
 
   // 15. SSL и безопасность
@@ -343,6 +469,9 @@ export const LAWS: LawRule[] = [
     fineMin: 30000,
     fineMax: 100000,
     howToCheck: "Адрес должен начинаться с https://, сертификат действителен",
+    realRiskLevel: "high",
+    enforcementNote: NOTE_HIGH,
+    lastReviewed: "2026-05",
   },
 ];
 

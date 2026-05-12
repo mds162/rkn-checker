@@ -10,7 +10,7 @@ const SYSTEM_PROMPT = `Ты — эксперт по российскому ин�
 Ты получаешь: HTML главной страницы, текст политики конфиденциальности, пользовательского соглашения, страницы контактов, данные о CMP-платформе и формах.
 
 Список правил для проверки (используй только эти ID, не выдумывай новые):
-${LAWS.map((l) => `- ${l.id}: ${l.title} | ${l.law} | штраф ${l.fineMin}–${l.fineMax} ₽ | как проверить: ${l.howToCheck}`).join("\n")}
+${LAWS.map((l) => `- ${l.id}: ${l.title} | ${l.law} | штраф ${l.fineMin}–${l.fineMax} ₽ | реальный риск: ${l.realRiskLevel} | как проверить: ${l.howToCheck}`).join("\n")}
 
 Инструкции по анализу:
 
@@ -53,10 +53,12 @@ ${LAWS.map((l) => `- ${l.id}: ${l.title} | ${l.law} | штраф ${l.fineMin}–
 - medium: 100к–300к ₽
 - low: < 100к ₽
 
+Поле realRiskLevel для каждого нарушения бери из списка правил выше. Не выдумывай значение — только то, что указано в соответствующем правиле. Если находишь нарушение, которого нет в списке — укажи realRiskLevel: "medium" по умолчанию.
+
 Верни СТРОГО валидный JSON без markdown, без текста до/после:
 {
   "violations": [
-    { "id": "<id из списка выше>", "evidence": "<конкретное доказательство>", "severity": "low|medium|high|critical" }
+    { "id": "<id из списка выше>", "evidence": "<конкретное доказательство>", "severity": "low|medium|high|critical", "realRiskLevel": "high|medium|low" }
   ]
 }`;
 
@@ -117,11 +119,11 @@ ${formSummary}`;
 
   const cleaned = textBlock.text.replace(/```json\s*|\s*```/g, "").trim();
   const parsed = JSON.parse(cleaned) as {
-    violations: { id: string; evidence: string; severity: Violation["severity"] }[];
+    violations: { id: string; evidence: string; severity: Violation["severity"]; realRiskLevel?: "high" | "medium" | "low" }[];
   };
 
   const violations: Violation[] = parsed.violations
-    .map((v) => {
+    .map((v): Violation | null => {
       const rule = LAWS.find((l) => l.id === v.id);
       if (!rule) return null;
       return {
@@ -133,7 +135,9 @@ ${formSummary}`;
         fineMax: rule.fineMax,
         evidence: v.evidence,
         severity: v.severity,
-      } satisfies Violation;
+        realRiskLevel: rule.realRiskLevel,
+        enforcementNote: rule.enforcementNote,
+      };
     })
     .filter((x): x is Violation => x !== null);
 

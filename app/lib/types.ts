@@ -7,6 +7,8 @@ export type Violation = {
   fineMax: number;
   evidence: string;
   severity: "low" | "medium" | "high" | "critical";
+  realRiskLevel?: "high" | "medium" | "low";
+  enforcementNote?: string;
 };
 
 export type PassedRule = {
@@ -26,4 +28,6 @@ export type CheckResult = {
   realisticFine: number;
   rulesChecked: number;
   categoriesChecked: number;
+  warnings?: string[];
+  spaDetected?: boolean;
 };

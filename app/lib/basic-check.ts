@@ -33,6 +33,8 @@ export function basicCheckHtml(url: string, html: string): CheckResult {
       fineMax: rule.fineMax,
       evidence,
       severity,
+      realRiskLevel: rule.realRiskLevel,
+      enforcementNote: rule.enforcementNote,
     });
   }
 

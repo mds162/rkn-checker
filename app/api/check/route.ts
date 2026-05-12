@@ -5,6 +5,7 @@ import { analyzeWithClaude } from "@/app/lib/claude";
 import { basicCheckHtml } from "@/app/lib/basic-check";
 import { detectCmp } from "@/app/lib/cmp-detector";
 import { analyzeForms } from "@/app/lib/form-analyzer";
+import { detectSpa } from "@/app/lib/spa-detector";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -37,6 +38,13 @@ export async function POST(req: Request) {
       const cmp = detectCmp(pages.homepage.html);
       const forms = analyzeForms(pages.homepage.html);
       const result = await analyzeWithClaude(pages, cmp, forms, apiKey);
+      const spa = detectSpa(pages.homepage.html);
+      if (spa.isLikelySpa) {
+        result.spaDetected = true;
+        result.warnings = [
+          "Сайт использует JavaScript-рендеринг, часть проверок может быть неточной. Точная проверка таких сайтов появится в Pro+ режиме.",
+        ];
+      }
       return NextResponse.json(result);
     } catch (e) {
       const message = e instanceof Error ? e.message : "Неизвестная ошибка";
@@ -51,6 +59,13 @@ export async function POST(req: Request) {
   try {
     const { html, finalUrl } = await fetchSiteHtml(url);
     const result = basicCheckHtml(finalUrl, html);
+    const spa = detectSpa(html);
+    if (spa.isLikelySpa) {
+      result.spaDetected = true;
+      result.warnings = [
+        "Сайт использует JavaScript-рендеринг, часть проверок может быть неточной. Точная проверка таких сайтов появится в Pro+ режиме.",
+      ];
+    }
     return NextResponse.json(result);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Неизвестная ошибка";

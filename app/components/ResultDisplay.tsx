@@ -8,19 +8,36 @@ import { OrderFixForm } from "./OrderFixForm";
 const fmt = (n: number) =>
   new Intl.NumberFormat("ru-RU").format(n) + " ₽";
 
-const SEVERITY_STYLES: Record<Violation["severity"], string> = {
-  critical: "bg-red-100 text-red-900 border-red-300",
-  high: "bg-orange-100 text-orange-900 border-orange-300",
-  medium: "bg-yellow-100 text-yellow-900 border-yellow-300",
-  low: "bg-blue-100 text-blue-900 border-blue-300",
+const RISK_BORDER: Record<"high" | "medium" | "low", string> = {
+  high: "border-l-4 border-red-500 bg-red-50",
+  medium: "border-l-4 border-yellow-500 bg-yellow-50",
+  low: "border-l-4 border-gray-300 bg-gray-50",
 };
 
-const SEVERITY_LABEL: Record<Violation["severity"], string> = {
-  critical: "Критично",
+const RISK_BADGE: Record<"high" | "medium" | "low", string> = {
+  high: "bg-red-100 text-red-800 border border-red-300",
+  medium: "bg-yellow-100 text-yellow-800 border border-yellow-300",
+  low: "bg-gray-100 text-gray-700 border border-gray-300",
+};
+
+const RISK_LABEL: Record<"high" | "medium" | "low", string> = {
   high: "Высокий риск",
   medium: "Средний риск",
   low: "Низкий риск",
 };
+
+const RISK_ORDER: Record<"high" | "medium" | "low", number> = {
+  high: 0,
+  medium: 1,
+  low: 2,
+};
+
+function getEffectiveRisk(v: Violation): "high" | "medium" | "low" {
+  if (v.realRiskLevel) return v.realRiskLevel;
+  if (v.severity === "critical" || v.severity === "high") return "high";
+  if (v.severity === "medium") return "medium";
+  return "low";
+}
 
 type Props = {
   result: CheckResult;
@@ -32,11 +49,17 @@ type Props = {
 
 export function ResultDisplay({ result, onReset, onCheckPro, proLoading, proError }: Props) {
   const [showOrder, setShowOrder] = useState(false);
-  const [paid, setPaid] = useState(false);
 
-  const sorted = [...result.violations].sort((a, b) => b.fineMax - a.fineMax);
-  const top3 = sorted.slice(0, 3);
-  const rest = sorted.slice(3);
+  const sorted = [...result.violations].sort((a, b) => {
+    const ra = RISK_ORDER[getEffectiveRisk(a)];
+    const rb = RISK_ORDER[getEffectiveRisk(b)];
+    if (ra !== rb) return ra - rb;
+    return b.fineMax - a.fineMax;
+  });
+
+  const highCount = sorted.filter((v) => getEffectiveRisk(v) === "high").length;
+  const mediumCount = sorted.filter((v) => getEffectiveRisk(v) === "medium").length;
+  const lowCount = sorted.filter((v) => getEffectiveRisk(v) === "low").length;
 
   const checkedIds = new Set([
     ...result.violations.map((v) => v.id),
@@ -52,6 +75,18 @@ export function ResultDisplay({ result, onReset, onCheckPro, proLoading, proErro
           ? "⚡ Быстрая проверка по 12 правилам (regex). Для полного анализа используйте режим «Полная проверка через AI»."
           : "🤖 Полная проверка через AI по 36 правилам."}
       </div>
+
+      {/* SPA Warning */}
+      {result.warnings && result.warnings.length > 0 && (
+        <div className="mb-6 p-4 bg-amber-50 border border-amber-400 rounded-lg flex gap-3">
+          <span className="text-xl flex-shrink-0">⚠️</span>
+          <div>
+            {result.warnings.map((w, i) => (
+              <p key={i} className="text-amber-900 text-sm">{w}</p>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 mb-6">
         <div className="text-sm text-gray-500 mb-2">Проверен сайт</div>
@@ -96,53 +131,43 @@ export function ResultDisplay({ result, onReset, onCheckPro, proLoading, proErro
         </div>
       </div>
 
-      <h2 className="text-2xl font-bold mb-4">Топ-3 самых дорогих нарушений</h2>
-      <div className="space-y-4 mb-8">
-        {top3.map((v) => (
-          <ViolationCard key={v.id} v={v} />
-        ))}
-      </div>
-
-      {rest.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-200 p-8 mb-6 relative">
-          <h2 className="text-2xl font-bold mb-4">
-            Полный отчёт по остальным {rest.length} нарушениям
-          </h2>
-          {paid ? (
-            <div className="space-y-4">
-              {rest.map((v) => (
-                <ViolationCard key={v.id} v={v} />
-              ))}
+      {/* Risk level summary */}
+      {result.violations.length > 0 && (
+        <div className="flex flex-wrap gap-3 mb-6">
+          {highCount > 0 && (
+            <div className="flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-200 rounded-lg">
+              <span className="w-3 h-3 rounded-full bg-red-500 flex-shrink-0" />
+              <span className="text-red-800 font-semibold text-sm">{highCount} высоких риска</span>
             </div>
-          ) : (
-            <>
-              <div className="space-y-4 blur-sm pointer-events-none select-none">
-                {rest.slice(0, 3).map((v) => (
-                  <ViolationCard key={v.id} v={v} />
-                ))}
-              </div>
-              <div className="absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-sm rounded-2xl">
-                <div className="text-center">
-                  <div className="text-lg font-semibold mb-2">
-                    Доступно после оплаты
-                  </div>
-                  <div className="text-3xl font-bold text-brand mb-4">490 ₽</div>
-                  <button
-                    onClick={() => setPaid(true)}
-                    className="px-6 py-3 bg-brand text-white font-semibold rounded-lg hover:bg-brand-dark transition"
-                  >
-                    Получить полный отчёт
-                  </button>
-                  <div className="text-xs text-gray-500 mt-2">
-                    (демо: оплата не подключена)
-                  </div>
-                </div>
-              </div>
-            </>
+          )}
+          {mediumCount > 0 && (
+            <div className="flex items-center gap-2 px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <span className="w-3 h-3 rounded-full bg-yellow-500 flex-shrink-0" />
+              <span className="text-yellow-800 font-semibold text-sm">{mediumCount} средних риска</span>
+            </div>
+          )}
+          {lowCount > 0 && (
+            <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+              <span className="w-3 h-3 rounded-full bg-gray-400 flex-shrink-0" />
+              <span className="text-gray-700 font-semibold text-sm">{lowCount} низких риска</span>
+            </div>
           )}
         </div>
       )}
 
+      {/* All violations */}
+      {sorted.length > 0 && (
+        <>
+          <h2 className="text-2xl font-bold mb-4">Найденные нарушения</h2>
+          <div className="space-y-4 mb-8">
+            {sorted.map((v) => (
+              <ViolationCard key={v.id} v={v} />
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Passed rules */}
       {result.passed.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-200 p-8 mb-6">
           <h2 className="text-xl font-bold mb-4 text-green-700">
@@ -156,6 +181,7 @@ export function ResultDisplay({ result, onReset, onCheckPro, proLoading, proErro
         </div>
       )}
 
+      {/* AI upsell for quick mode */}
       {result.mode === "quick" && uncheckedRules.length > 0 && onCheckPro && (
         <div className="bg-amber-50 border border-amber-300 rounded-2xl p-8 mb-6">
           <div className="flex items-start gap-4">
@@ -197,7 +223,7 @@ export function ResultDisplay({ result, onReset, onCheckPro, proLoading, proErro
         </div>
       )}
 
-      <div className="bg-gradient-to-br from-brand to-brand-dark rounded-2xl p-8 text-white">
+      <div className="bg-gradient-to-br from-brand to-brand-dark rounded-2xl p-8 text-white mb-6">
         <h2 className="text-2xl font-bold mb-2">Не хочется разбираться самому?</h2>
         <p className="mb-6 opacity-90">
           Оставьте заявку — наши специалисты за 3 дня исправят все нарушения на вашем сайте.
@@ -213,6 +239,11 @@ export function ResultDisplay({ result, onReset, onCheckPro, proLoading, proErro
             Заказать исправление
           </button>
         )}
+      </div>
+
+      {/* Disclaimer */}
+      <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600">
+        ⚠️ Результаты автоматической проверки носят информационный характер и не являются юридическим заключением. Реальная квалификация нарушений зависит от обстоятельств, статуса оператора ПДн, поданных в Роскомнадзор уведомлений и судебной практики. Для точной оценки рисков обратитесь к юристу.
       </div>
     </div>
   );
@@ -247,21 +278,27 @@ function PassedCard({ p }: { p: PassedRule }) {
 }
 
 function ViolationCard({ v }: { v: Violation }) {
+  const risk = getEffectiveRisk(v);
   return (
-    <div className={`border-l-4 rounded-lg p-5 ${SEVERITY_STYLES[v.severity]}`}>
+    <div className={`rounded-lg p-5 ${RISK_BORDER[risk]}`}>
       <div className="flex justify-between items-start gap-4 mb-2">
-        <h3 className="font-semibold text-lg">{v.title}</h3>
-        <span className="text-xs font-bold uppercase whitespace-nowrap">
-          {SEVERITY_LABEL[v.severity]}
+        <h3 className="font-semibold text-lg text-gray-900">{v.title}</h3>
+        <span className={`text-xs font-bold uppercase whitespace-nowrap px-2 py-1 rounded-full ${RISK_BADGE[risk]}`}>
+          {RISK_LABEL[risk]}
         </span>
       </div>
-      <div className="text-sm opacity-80 mb-2">
+      <div className="text-sm text-gray-600 mb-2">
         Категория: {v.category} · {v.law}
       </div>
-      <div className="text-sm mb-3 italic">{v.evidence}</div>
-      <div className="font-semibold">
+      <div className="text-sm mb-3 italic text-gray-700">{v.evidence}</div>
+      <div className="font-semibold text-gray-900">
         Штраф: {fmt(v.fineMin)} – {fmt(v.fineMax)}
       </div>
+      {v.enforcementNote && (
+        <div className="mt-3 text-xs text-gray-500 border-t border-gray-200 pt-2">
+          <span className="font-semibold">Реальная практика:</span> {v.enforcementNote}
+        </div>
+      )}
     </div>
   );
 }
