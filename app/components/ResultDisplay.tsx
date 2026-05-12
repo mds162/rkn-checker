@@ -234,7 +234,7 @@ const PASSED_LABEL: Record<string, string> = {
 };
 
 function PassedCard({ p }: { p: PassedRule }) {
-  const label = PASSED_LABEL[p.id] ?? p.title;
+  const label = PASSED_LABEL[p.id] ?? `Нарушение не обнаружено: ${p.title.toLowerCase()}`;
   return (
     <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm">
       <span className="text-green-600 mt-0.5 font-bold">✓</span>

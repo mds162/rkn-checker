@@ -137,6 +137,11 @@ ${formSummary}`;
     })
     .filter((x): x is Violation => x !== null);
 
+  const violatedIds = new Set(violations.map((v) => v.id));
+  const passed = LAWS
+    .filter((l) => !violatedIds.has(l.id))
+    .map((l) => ({ id: l.id, category: l.category, title: l.title }));
+
   const totalFineMin = violations.reduce((s, v) => s + v.fineMin, 0);
   const totalFineMax = violations.reduce((s, v) => s + v.fineMax, 0);
   const realisticFine = Math.round((totalFineMin + totalFineMax) / 2);
@@ -147,7 +152,7 @@ ${formSummary}`;
     checkedAt: new Date().toISOString(),
     mode: "pro",
     violations,
-    passed: [],
+    passed,
     totalFineMin,
     totalFineMax,
     realisticFine,
