@@ -11,7 +11,7 @@ export function detectCommercial(html: string): CommercialSignals {
     signals.push("Обнаружена e-commerce платформа");
   }
 
-  if (/корзина|в корзину|купить|add to cart|оформить заказ|checkout/i.test(html)) {
+  if (/в корзину|add to cart|оформить заказ|checkout|cart-button|btn-cart/i.test(html)) {
     signals.push("Элементы корзины или кнопки покупки");
   }
 

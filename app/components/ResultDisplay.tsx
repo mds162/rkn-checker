@@ -47,6 +47,34 @@ type Props = {
   proError?: string | null;
 };
 
+// Правила, которые нельзя надёжно проверить автоматически
+const UNVERIFIABLE_IDS = new Set([
+  "pd-localization",
+  "pd-roskomnadzor",
+  "rkn-blogger",
+  "zpp-return",
+  "zpp-warranty",
+  "age-marker", // нельзя определить тип сайта (СМИ vs обычный) из HTML
+]);
+
+async function downloadPdf(result: CheckResult) {
+  const res = await fetch('/api/report', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(result),
+  });
+  if (!res.ok) { alert('Ошибка генерации PDF'); return; }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  let hostname = result.url;
+  try { hostname = new URL(result.url).hostname; } catch { /* keep */ }
+  a.download = `audit-${hostname.replace(/[^a-z0-9]/gi, '-')}.pdf`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function ResultDisplay({ result, onReset, onCheckPro, proLoading, proError }: Props) {
   const [showOrder, setShowOrder] = useState(false);
 
@@ -72,8 +100,8 @@ export function ResultDisplay({ result, onReset, onCheckPro, proLoading, proErro
     <div className="w-full max-w-4xl mx-auto py-12 px-4">
       <div className="mb-6 p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-600 text-sm">
         {result.mode === "quick"
-          ? "⚡ Быстрая проверка по 12 правилам (regex). Для полного анализа используйте режим «Полная проверка через AI»."
-          : "🤖 Полная проверка через AI по 36 правилам."}
+          ? `⚡ Быстрая проверка по ${result.rulesChecked} правилам (regex). Для полного анализа используйте режим «Полная проверка через AI».`
+          : `🤖 Полная проверка через AI по ${result.rulesChecked} правилам.`}
       </div>
 
       {/* SPA Warning */}
@@ -117,9 +145,12 @@ export function ResultDisplay({ result, onReset, onCheckPro, proLoading, proErro
 
         <div className="mt-6 flex flex-wrap gap-3">
           <button
-            onClick={() => window.print()}
-            className="px-5 py-3 bg-brand text-white font-medium rounded-lg hover:bg-brand-dark transition"
+            onClick={() => downloadPdf(result)}
+            className="px-5 py-3 bg-brand text-white font-medium rounded-lg hover:bg-brand-dark transition flex items-center gap-2"
           >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 4v11" />
+            </svg>
             Скачать PDF
           </button>
           <button
@@ -188,7 +219,7 @@ export function ResultDisplay({ result, onReset, onCheckPro, proLoading, proErro
             <div className="text-3xl">🤖</div>
             <div className="flex-1">
               <h2 className="text-xl font-bold text-amber-900 mb-2">
-                Быстрая проверка охватывает только 12 из {uncheckedRules.length + checkedIds.size} правил
+                Быстрая проверка охватывает только {result.rulesChecked} из {uncheckedRules.length + checkedIds.size} правил
               </h2>
               <p className="text-amber-800 text-sm mb-4">
                 AI читает весь HTML и проверяет {uncheckedRules.length} дополнительных правил — реквизиты,
@@ -248,16 +279,6 @@ export function ResultDisplay({ result, onReset, onCheckPro, proLoading, proErro
     </div>
   );
 }
-
-// Правила, которые нельзя надёжно проверить автоматически:
-// реестр РКН, местонахождение серверов, трафик
-const UNVERIFIABLE_IDS = new Set([
-  "pd-localization",
-  "pd-roskomnadzor",
-  "rkn-blogger",
-  "zpp-return",   // старые правила — заменены на return-policy-missing
-  "zpp-warranty",
-]);
 
 const PASSED_LABEL: Record<string, string> = {
   // Персональные данные — что реально найдено в HTML

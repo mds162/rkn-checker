@@ -3,24 +3,36 @@ export async function fetchSiteHtml(
   options?: { maxBytes?: number }
 ): Promise<{ html: string; finalUrl: string }> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
+  const timeout = setTimeout(() => controller.abort(), 20000);
   try {
     const response = await fetch(url, {
       signal: controller.signal,
       redirect: "follow",
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "ru-RU,ru;q=0.9,en;q=0.8",
-        "Accept-Encoding": "gzip, deflate, br",
       },
     });
-    if (!response.ok) {
-      throw new Error(`Сайт ответил кодом ${response.status}`);
-    }
     const html = await response.text();
     const maxBytes = options?.maxBytes ?? Infinity;
-    return { html: html.slice(0, maxBytes), finalUrl: response.url };
+    const sliced = html.slice(0, maxBytes);
+
+    // Если сервер вернул ошибку и тела почти нет — бросаем понятное сообщение
+    if (!response.ok && sliced.trim().length < 500) {
+      if (response.status === 401 || response.status === 403) {
+        throw new Error(`Сайт блокирует автоматические запросы (код ${response.status}). Попробуйте Pro-режим или проверьте URL вручную.`);
+      }
+      throw new Error(`Сайт ответил кодом ${response.status}`);
+    }
+
+    // Иначе используем что вернулось — даже с 4xx часто приходит реальный HTML
+    return { html: sliced, finalUrl: response.url };
+  } catch (e) {
+    if (e instanceof Error && (e.name === "AbortError" || e.message.includes("aborted"))) {
+      throw new Error("Сайт не ответил за 20 секунд — возможно, он недоступен или слишком медленный");
+    }
+    throw e;
   } finally {
     clearTimeout(timeout);
   }

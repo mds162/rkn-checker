@@ -11,7 +11,6 @@ const QUICK_RULE_IDS = [
   "pd-policy",
   "cookie-banner",
   "ssl",
-  "age-marker",
   "lang-headers",
   "lang-anglicisms",
   "requisites-missing",
@@ -87,7 +86,7 @@ export function basicCheckHtml(url: string, html: string): CheckResult {
   // 6. Политика конфиденциальности
   const privacyLink = /<a\s[^>]*>[^<]*(?:политика конфиденциальности|политика обработки|обработка персональных|privacy policy|privacy)[^<]*<\/a>/i.test(html);
   if (!privacyLink) {
-    add("pd-policy", "На странице не найдено ссылок на политику конфиденциальности", "high");
+    add("pd-policy", "На странице не найдено ссылок на политику конфиденциальности", "medium");
   }
 
   // 7. Cookie-баннер
@@ -106,12 +105,6 @@ export function basicCheckHtml(url: string, html: string): CheckResult {
   // 8. SSL
   if (!url.startsWith("https://")) {
     add("ssl", "Сайт не использует HTTPS", "high");
-  }
-
-  // 9. Возрастная маркировка
-  const hasAgeMarker = /\b(0|6|12|16|18)\+/.test(html);
-  if (!hasAgeMarker) {
-    add("age-marker", "На странице не найдена возрастная маркировка (0+, 6+, 12+, 16+, 18+)", "medium");
   }
 
   // 10. Навигация на иностранном языке
@@ -152,7 +145,7 @@ export function basicCheckHtml(url: string, html: string): CheckResult {
       !hasOgrn && "ОГРН",
       !hasLegalName && "название юр.лица (ООО/ИП/АО)"
     ].filter(Boolean).join(", ");
-    add("requisites-missing", `Не найдено на странице: ${missing}`, "medium");
+    add("requisites-missing", `Не найдено на странице: ${missing}`, "low");
   }
 
   // 13. Контакты (телефон или email)
@@ -182,7 +175,7 @@ export function basicCheckHtml(url: string, html: string): CheckResult {
     }
 
     if (!/<a[^>]*>[^<]*(?:оферт|условия использования|пользовательское соглашение|публичный договор)/i.test(html)) {
-      add("offer-missing", "На сайте не найдена ссылка на оферту или условия продажи", "medium");
+      add("offer-missing", "На сайте не найдена ссылка на оферту или условия продажи", "low");
     }
 
     const hasEcommerceSignal = commercial.signals.some(
@@ -190,7 +183,7 @@ export function basicCheckHtml(url: string, html: string): CheckResult {
     );
     if (hasEcommerceSignal) {
       if (!/<a[^>]*>[^<]*(?:возврат|обмен|гарантия товар)/i.test(html)) {
-        add("return-policy-missing", "Не найдена страница с условиями возврата товара", "medium");
+        add("return-policy-missing", "Не найдена страница с условиями возврата товара", "low");
       }
     }
   }

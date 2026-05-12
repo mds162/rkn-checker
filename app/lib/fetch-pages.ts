@@ -32,9 +32,8 @@ const TOTAL_TIMEOUT = 30_000;
 
 const HEADERS = {
   "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
   "Accept-Language": "ru-RU,ru;q=0.9,en;q=0.8",
-  "Accept-Encoding": "gzip, deflate, br",
 };
 
 async function fetchWithTimeout(
@@ -45,6 +44,11 @@ async function fetchWithTimeout(
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetch(url, { signal: controller.signal, redirect: "follow", headers: HEADERS });
+  } catch (e) {
+    if (e instanceof Error && (e.name === "AbortError" || e.message.includes("aborted"))) {
+      throw new Error(`Сайт не ответил за ${timeoutMs / 1000} секунд`);
+    }
+    throw e;
   } finally {
     clearTimeout(timer);
   }
@@ -107,6 +111,13 @@ export async function fetchSitePages(inputUrl: string): Promise<SitePages> {
   const homeRes = await fetchWithTimeout(inputUrl);
   const homeHtml = (await homeRes.text()).slice(0, MAX_BYTES);
   const finalUrl = homeRes.url;
+
+  if (!homeRes.ok && homeHtml.trim().length < 500) {
+    if (homeRes.status === 401 || homeRes.status === 403) {
+      throw new Error(`Сайт блокирует автоматические запросы (код ${homeRes.status}). Попробуйте позже или проверьте URL.`);
+    }
+    throw new Error(`Сайт ответил кодом ${homeRes.status}`);
+  }
 
   const homepage: SitePages["homepage"] = {
     url: finalUrl,

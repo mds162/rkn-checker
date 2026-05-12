@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 80" width="280" height="80">
+  <!-- Логотип «Аудит152». Используется на сайте, в PDF, в соцсетях.
+       Цвета: navy #1A365D (Аудит), red #DC2626 (152) -->
+  
+  <!-- Основной знак: Аудит + 152 -->
+  <text x="10" y="48" 
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" 
+        font-size="36" 
+        font-weight="500" 
+        fill="#1A365D" 
+        letter-spacing="-0.5">Аудит</text>
+  
+  <text x="135" y="48" 
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" 
+        font-size="36" 
+        font-weight="700" 
+        fill="#DC2626" 
+        letter-spacing="-0.5">152</text>
+  
+  <!-- Акцент под "152": тонкая красная линия -->
+  <line x1="135" y1="58" x2="200" y2="58" 
+        stroke="#DC2626" 
+        stroke-width="2"/>
+  
+  <!-- Подпись внизу -->
+  <text x="10" y="73" 
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" 
+        font-size="10" 
+        font-weight="400" 
+        fill="#64748B" 
+        letter-spacing="2">ПРОВЕРКА САЙТОВ НА СООТВЕТСТВИЕ ЗАКОНУ</text>
+</svg>
