@@ -3,16 +3,19 @@
 import { useState } from "react";
 import { CheckForm } from "./components/CheckForm";
 import { ResultDisplay } from "./components/ResultDisplay";
+import { ProLoadingScreen } from "./components/ProLoadingScreen";
 import { TOTAL_RULES, TOTAL_CATEGORIES } from "./lib/laws";
 import type { CheckResult } from "./lib/types";
 
 export default function Home() {
   const [result, setResult] = useState<CheckResult | null>(null);
   const [proLoading, setProLoading] = useState(false);
+  const [proLoadingUrl, setProLoadingUrl] = useState("");
   const [proError, setProError] = useState<string | null>(null);
 
   async function handleCheckPro(url: string) {
     setProLoading(true);
+    setProLoadingUrl(url);
     setProError(null);
     try {
       const res = await fetch("/api/check", {
@@ -28,6 +31,14 @@ export default function Home() {
     } finally {
       setProLoading(false);
     }
+  }
+
+  if (proLoading) {
+    return (
+      <main className="min-h-screen flex items-center justify-center px-4">
+        <ProLoadingScreen url={proLoadingUrl} />
+      </main>
+    );
   }
 
   if (result) {
