@@ -10,17 +10,28 @@ import { detectSpa } from "@/app/lib/spa-detector";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const CONTACTS_KEYWORDS = ["контакты", "о компании", "реквизиты", "about", "contacts", "contact"];
+// Matches link text
+const CONTACTS_TEXT_KW = [
+  "контакты", "контакт", "о компании", "о нас", "реквизиты",
+  "about", "contacts", "contact", "о фирме", "о магазине",
+  "наша компания", "связаться", "связь",
+];
+
+// Matches href path segment (case-insensitive)
+const CONTACTS_HREF_RE =
+  /\/(contact|contacts|about|about-us|aboutus|o-nas|o-kompanii|o-sebe|o-firme|rekvizity|requisites|company|info|corporate|svyaz|svyazatsya)(\/|\.|\?|$)/i;
 
 async function fetchContactsPage(html: string, baseUrl: string): Promise<string | undefined> {
-  // Extract first <a> matching contacts keywords
   const re = /<a\s[^>]*href=["']([^"'#][^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;
   let m: RegExpExecArray | null;
   let contactUrl: string | undefined;
   while ((m = re.exec(html)) !== null) {
+    const href = m[1].trim();
     const text = m[2].replace(/<[^>]+>/g, " ").trim().toLowerCase();
-    if (CONTACTS_KEYWORDS.some((kw) => text.includes(kw))) {
-      try { contactUrl = new URL(m[1].trim(), baseUrl).href; } catch { /* skip */ }
+    const matchesText = CONTACTS_TEXT_KW.some((kw) => text.includes(kw));
+    const matchesHref = CONTACTS_HREF_RE.test(href);
+    if (matchesText || matchesHref) {
+      try { contactUrl = new URL(href, baseUrl).href; } catch { /* skip */ }
       if (contactUrl) break;
     }
   }

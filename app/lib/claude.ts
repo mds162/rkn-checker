@@ -178,13 +178,19 @@ ${formSummary}`;
     })
     .filter((x): x is Violation => x !== null);
 
-  const violatedIds = new Set(violations.map((v) => v.id));
+  // Dedup: req-inn/req-company/req-address are subsets of requisites-missing
+  const hasRequisitesMissing = violations.some((v) => v.id === "requisites-missing");
+  const dedupedViolations = hasRequisitesMissing
+    ? violations.filter((v) => !["req-inn", "req-company", "req-address"].includes(v.id))
+    : violations;
+
+  const violatedIds = new Set(dedupedViolations.map((v) => v.id));
   const passed = LAWS
     .filter((l) => !violatedIds.has(l.id))
     .map((l) => ({ id: l.id, category: l.category, title: l.title }));
 
-  const totalFineMin = violations.reduce((s, v) => s + v.fineMin, 0);
-  const totalFineMax = violations.reduce((s, v) => s + v.fineMax, 0);
+  const totalFineMin = dedupedViolations.reduce((s, v) => s + v.fineMin, 0);
+  const totalFineMax = dedupedViolations.reduce((s, v) => s + v.fineMax, 0);
   const realisticFine = Math.round((totalFineMin + totalFineMax) / 2);
   const categoriesChecked = new Set(LAWS.map((l) => l.category)).size;
 
@@ -192,7 +198,7 @@ ${formSummary}`;
     url: pages.homepage.url,
     checkedAt: new Date().toISOString(),
     mode: "pro",
-    violations,
+    violations: dedupedViolations,
     passed,
     totalFineMin,
     totalFineMax,

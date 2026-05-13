@@ -148,12 +148,30 @@ export function basicCheckHtml(url: string, html: string, extraHtml?: string): C
   }
 
   // 12. Реквизиты юр.лица (ИНН + ОГРН + название) — проверяем во всех доступных страницах
-  const innRegex = /\bИНН[:\s]*(\d{10}|\d{12})\b/i;
-  const ogrnRegex = /\bОГРН(?:ИП)?[:\s]*(\d{13}|\d{15})\b/i;
-  const legalNameRegex = /\b(ООО|АО|ПАО|ИП|ОАО|ЗАО)\s+["«][^"»]{2,}["»]/;
-  const hasInn = innRegex.test(fullHtml);
-  const hasOgrn = ogrnRegex.test(fullHtml);
-  const hasLegalName = legalNameRegex.test(fullHtml);
+  // Снимаем HTML-теги, чтобы "ИНН" и число не были разделены тегами типа </strong>
+  const plainTextForReq = fullHtml
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;|&#160;/g, " ")
+    .replace(/\s+/g, " ");
+
+  const innRegex = /ИНН[\s:]{0,5}(\d[\d ]{7,11}\d)/i;
+  const ogrnRegex = /ОГРН(?:ИП)?[\s:]{0,5}(\d[\d ]{11,15}\d)/i;
+  // Название: с кавычками или без («ООО Биофор» или ООО Биофор)
+  const legalNameRegex = /\b(ООО|АО|ПАО|ИП|ОАО|ЗАО)\s+(?:["«]?.{2,40}["»]?)/;
+
+  const hasInn = (() => {
+    const m = plainTextForReq.match(innRegex);
+    if (!m) return false;
+    const d = m[1].replace(/\s/g, "");
+    return d.length === 10 || d.length === 12;
+  })();
+  const hasOgrn = (() => {
+    const m = plainTextForReq.match(ogrnRegex);
+    if (!m) return false;
+    const d = m[1].replace(/\s/g, "");
+    return d.length === 13 || d.length === 15;
+  })();
+  const hasLegalName = legalNameRegex.test(plainTextForReq);
   if (!hasInn || !hasOgrn || !hasLegalName) {
     const missing = [
       !hasInn && "ИНН",
