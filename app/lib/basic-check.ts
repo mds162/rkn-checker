@@ -20,7 +20,9 @@ const QUICK_RULE_IDS = [
 
 const RULES_CHECKED = QUICK_RULE_IDS.length;
 
-export function basicCheckHtml(url: string, html: string): CheckResult {
+export function basicCheckHtml(url: string, html: string, extraHtml?: string): CheckResult {
+  // Combined HTML for checks that need to look beyond the homepage (e.g. contacts page)
+  const fullHtml = extraHtml ? html + "\n" + extraHtml : html;
   const violations: Violation[] = [];
 
   function add(id: string, evidence: string, severity: Violation["severity"]) {
@@ -145,13 +147,13 @@ export function basicCheckHtml(url: string, html: string): CheckResult {
     add("lang-anglicisms", `Найдены англицизмы: ${foundAnglicisms.join(", ")}`, "medium");
   }
 
-  // 12. Реквизиты юр.лица (ИНН + ОГРН + название)
+  // 12. Реквизиты юр.лица (ИНН + ОГРН + название) — проверяем во всех доступных страницах
   const innRegex = /\bИНН[:\s]*(\d{10}|\d{12})\b/i;
   const ogrnRegex = /\bОГРН(?:ИП)?[:\s]*(\d{13}|\d{15})\b/i;
   const legalNameRegex = /\b(ООО|АО|ПАО|ИП|ОАО|ЗАО)\s+["«][^"»]{2,}["»]/;
-  const hasInn = innRegex.test(html);
-  const hasOgrn = ogrnRegex.test(html);
-  const hasLegalName = legalNameRegex.test(html);
+  const hasInn = innRegex.test(fullHtml);
+  const hasOgrn = ogrnRegex.test(fullHtml);
+  const hasLegalName = legalNameRegex.test(fullHtml);
   if (!hasInn || !hasOgrn || !hasLegalName) {
     const missing = [
       !hasInn && "ИНН",
@@ -161,10 +163,10 @@ export function basicCheckHtml(url: string, html: string): CheckResult {
     add("requisites-missing", `Не найдено на странице: ${missing}`, "low");
   }
 
-  // 13. Контакты (телефон или email)
+  // 13. Контакты (телефон или email) — проверяем во всех доступных страницах
   const phoneRegex = /(?:\+7|8)[\s\-()]?\d{3}[\s\-()]?\d{3}[\s\-()]?\d{2}[\s\-()]?\d{2}/;
   const emailRegex = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i;
-  if (!phoneRegex.test(html) && !emailRegex.test(html)) {
+  if (!phoneRegex.test(fullHtml) && !emailRegex.test(fullHtml)) {
     add("contacts-missing", "Не найден ни телефон, ни email на главной странице", "low");
   }
 

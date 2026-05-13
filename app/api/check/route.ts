@@ -10,6 +10,40 @@ import { detectSpa } from "@/app/lib/spa-detector";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+const CONTACTS_KEYWORDS = ["контакты", "о компании", "реквизиты", "about", "contacts", "contact"];
+
+async function fetchContactsPage(html: string, baseUrl: string): Promise<string | undefined> {
+  // Extract first <a> matching contacts keywords
+  const re = /<a\s[^>]*href=["']([^"'#][^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  let m: RegExpExecArray | null;
+  let contactUrl: string | undefined;
+  while ((m = re.exec(html)) !== null) {
+    const text = m[2].replace(/<[^>]+>/g, " ").trim().toLowerCase();
+    if (CONTACTS_KEYWORDS.some((kw) => text.includes(kw))) {
+      try { contactUrl = new URL(m[1].trim(), baseUrl).href; } catch { /* skip */ }
+      if (contactUrl) break;
+    }
+  }
+  if (!contactUrl || contactUrl === baseUrl) return undefined;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(contactUrl, {
+      signal: controller.signal,
+      redirect: "follow",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "ru-RU,ru;q=0.9,en;q=0.8",
+      },
+    });
+    clearTimeout(timer);
+    return (await res.text()).slice(0, 200_000);
+  } catch {
+    return undefined;
+  }
+}
+
 export async function POST(req: Request) {
   let url = "";
   let mode: "quick" | "pro" = "quick";
@@ -58,7 +92,11 @@ export async function POST(req: Request) {
   // Quick mode
   try {
     const { html, finalUrl } = await fetchSiteHtml(url);
-    const result = basicCheckHtml(toDisplayUrl(finalUrl), html);
+
+    // Try to fetch contacts page for more accurate requisites/contacts checks
+    const extraHtml = await fetchContactsPage(html, finalUrl);
+
+    const result = basicCheckHtml(toDisplayUrl(finalUrl), html, extraHtml);
     const spa = detectSpa(html);
     if (spa.isLikelySpa) {
       result.spaDetected = true;
