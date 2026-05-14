@@ -65,43 +65,45 @@ async function fetchUrl(url: string): Promise<string | undefined> {
 }
 
 async function fetchContactsPage(html: string, baseUrl: string): Promise<string | undefined> {
-  // 1. Ищем ссылку на контакты в HTML
+  const parts: string[] = [];
+  const fetched = new Set<string>();
+
+  // 1. Ищем все подходящие ссылки на контакты в HTML (до 3 штук)
   const re = /<a\s[^>]*href=["']([^"'#][^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;
   let m: RegExpExecArray | null;
-  let contactUrl: string | undefined;
-  while ((m = re.exec(html)) !== null) {
+  const candidates: string[] = [];
+  while ((m = re.exec(html)) !== null && candidates.length < 3) {
     const href = m[1].trim();
     const text = m[2].replace(/<[^>]+>/g, " ").trim().toLowerCase();
     const matchesText = CONTACTS_TEXT_KW.some((kw) => text.includes(kw));
     const matchesHref = CONTACTS_HREF_RE.test(href);
     if (matchesText || matchesHref) {
-      try { contactUrl = new URL(href, baseUrl).href; } catch { /* skip */ }
-      if (contactUrl) break;
+      try {
+        const u = new URL(href, baseUrl).href;
+        if (u !== baseUrl && !fetched.has(u)) candidates.push(u);
+      } catch { /* skip */ }
     }
   }
 
-  console.log(`[contacts] baseUrl=${baseUrl} foundViaLink=${contactUrl ?? "none"}`);
-
-  if (contactUrl && contactUrl !== baseUrl) {
-    const result = await fetchUrl(contactUrl);
-    console.log(`[contacts] fetchUrl(${contactUrl}) => ${result ? result.length + " chars" : "undefined"}`);
-    if (result) return result;
+  for (const u of candidates) {
+    const result = await fetchUrl(u);
+    if (result) { parts.push(result); fetched.add(u); }
   }
 
-  // 2. Фоллбэк: перебираем распространённые URL напрямую
+  // 2. Всегда проверяем приоритетные пути (реквизиты/контакты могут быть на другой странице)
   const origin = new URL(baseUrl).origin;
   for (const path of CONTACTS_PROBE_PATHS) {
     const probeUrl = origin + path;
-    if (probeUrl === baseUrl) continue;
+    if (probeUrl === baseUrl || fetched.has(probeUrl)) continue;
     const result = await fetchUrl(probeUrl);
     if (result) {
-      console.log(`[contacts] probe success: ${probeUrl} => ${result.length} chars`);
-      return result;
+      parts.push(result);
+      fetched.add(probeUrl);
+      break;
     }
   }
 
-  console.log(`[contacts] all probes failed for ${origin}`);
-  return undefined;
+  return parts.length > 0 ? parts.join("\n") : undefined;
 }
 
 export async function POST(req: Request) {
