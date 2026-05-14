@@ -257,22 +257,20 @@ function formatFine(amount: number): string {
 function sortByRisk(violations: Violation[]): Violation[] {
   const order = { high: 0, medium: 1, low: 2 };
   return [...violations].sort((a, b) => {
-    const aLevel = a.realRiskLevel ?? 'medium';
-    const bLevel = b.realRiskLevel ?? 'medium';
-    const diff = (order[aLevel] ?? 1) - (order[bLevel] ?? 1);
+    const diff = (order[a.severity] ?? 1) - (order[b.severity] ?? 1);
     if (diff !== 0) return diff;
     return b.fineMax - a.fineMax;
   });
 }
 
-function getRiskColors(level?: string) {
+function getRiskColors(level: string) {
   if (level === 'high') return { bg: BRAND_COLORS.riskHighBg, text: BRAND_COLORS.riskHighText, border: BRAND_COLORS.riskHighBorder, label: 'Высокий риск' };
   if (level === 'medium') return { bg: BRAND_COLORS.riskMediumBg, text: BRAND_COLORS.riskMediumText, border: BRAND_COLORS.riskMediumBorder, label: 'Средний риск' };
   return { bg: BRAND_COLORS.riskLowBg, text: BRAND_COLORS.riskLowText, border: BRAND_COLORS.riskLowBorder, label: 'Низкий риск' };
 }
 
 function ViolationCard({ violation }: { violation: Violation }) {
-  const risk = getRiskColors(violation.realRiskLevel);
+  const risk = getRiskColors(violation.severity);
   return (
     <View style={[styles.violationCard, { borderLeftWidth: 3, borderLeftColor: risk.border }]} wrap={false}>
       <View style={styles.violationCardInner}>
@@ -290,13 +288,10 @@ function ViolationCard({ violation }: { violation: Violation }) {
           <Text style={styles.fineLabel}>Штраф для юр. лица:</Text>
           <Text style={styles.fineValue}>{formatFine(violation.fineMin)} – {formatFine(violation.fineMax)}</Text>
         </View>
-        {violation.fineMinIp != null && violation.fineMaxIp != null && (
-          <View style={[styles.fineRow, { marginTop: -2, marginBottom: 4 }]}>
-            <Text style={[styles.fineLabel, { color: BRAND_COLORS.textTertiary }]}>для ИП:</Text>
-            <Text style={[styles.fineValue, { color: BRAND_COLORS.textTertiary, fontWeight: 400 }]}>
-              {formatFine(violation.fineMinIp)} – {formatFine(violation.fineMaxIp)}
-            </Text>
-          </View>
+        {violation.lawArticle && (
+          <Text style={[styles.fineLabel, { color: BRAND_COLORS.textTertiary, marginBottom: 4 }]}>
+            {violation.lawArticle}
+          </Text>
         )}
         {violation.enforcementNote && (
           <View style={styles.enforcementBlock}>
@@ -346,9 +341,9 @@ function CheckInfo({ result }: { result: CheckResult }) {
 }
 
 function SummaryGrid({ result }: { result: CheckResult }) {
-  const highCount = result.violations.filter(v => v.realRiskLevel === 'high').length;
-  const medCount = result.violations.filter(v => v.realRiskLevel === 'medium').length;
-  const lowCount = result.violations.filter(v => v.realRiskLevel === 'low' || !v.realRiskLevel).length;
+  const highCount = result.violations.filter(v => v.severity === 'high').length;
+  const medCount = result.violations.filter(v => v.severity === 'medium').length;
+  const lowCount = result.violations.filter(v => v.severity === 'low').length;
 
   return (
     <View style={styles.summaryGrid}>

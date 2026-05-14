@@ -62,18 +62,12 @@ ${LAWS.map((l) => `- ${l.id}: ${l.title} | ${l.law} | штраф ${l.fineMin}–
    - meta-ads-pixel: найди Facebook Pixel (connect.facebook.net, fbq())
    - meta-links-text: найди текстовые упоминания Instagram/Facebook без пометки об экстремизме
 
-Правила оценки severity:
-- critical: штраф > 1 млн ₽
-- high: 300к–1 млн ₽
-- medium: 100к–300к ₽
-- low: < 100к ₽
-
-Поле realRiskLevel для каждого нарушения бери из списка правил выше. Не выдумывай значение — только то, что указано в соответствующем правиле. Если находишь нарушение, которого нет в списке — укажи realRiskLevel: "medium" по умолчанию.
+Поле severity для каждого нарушения бери из поля "реальный риск" в списке правил выше (high/medium/low). Не выдумывай значение. Если находишь нарушение, которого нет в списке — укажи severity: "medium" по умолчанию.
 
 Верни СТРОГО валидный JSON без markdown, без текста до/после:
 {
   "violations": [
-    { "id": "<id из списка выше>", "evidence": "<конкретное доказательство>", "severity": "low|medium|high|critical", "realRiskLevel": "high|medium|low" }
+    { "id": "<id из списка выше>", "evidence": "<конкретное доказательство>", "severity": "low|medium|high" }
   ]
 }`;
 
@@ -141,7 +135,7 @@ ${cmpSummary}
 ${formSummary}`;
 
   const message = await client.messages.create({
-    model: "claude-sonnet-4-5",
+    model: "claude-sonnet-4-6",
     max_tokens: 4096,
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: userContent }],
@@ -154,7 +148,7 @@ ${formSummary}`;
 
   const cleaned = textBlock.text.replace(/```json\s*|\s*```/g, "").trim();
   const parsed = JSON.parse(cleaned) as {
-    violations: { id: string; evidence: string; severity: Violation["severity"]; realRiskLevel?: "high" | "medium" | "low" }[];
+    violations: { id: string; evidence: string; severity: Violation["severity"] }[];
   };
 
   const violations: Violation[] = parsed.violations
@@ -166,13 +160,11 @@ ${formSummary}`;
         category: rule.category,
         title: rule.title,
         law: rule.law,
+        lawArticle: rule.lawArticle,
         fineMin: rule.fineMin,
         fineMax: rule.fineMax,
-        fineMinIp: rule.fineMinIp,
-        fineMaxIp: rule.fineMaxIp,
         evidence: v.evidence,
-        severity: v.severity,
-        realRiskLevel: rule.realRiskLevel,
+        severity: rule.realRiskLevel,
         enforcementNote: rule.enforcementNote,
       };
     })

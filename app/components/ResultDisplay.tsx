@@ -33,10 +33,7 @@ const RISK_ORDER: Record<"high" | "medium" | "low", number> = {
 };
 
 function getEffectiveRisk(v: Violation): "high" | "medium" | "low" {
-  if (v.realRiskLevel) return v.realRiskLevel;
-  if (v.severity === "critical" || v.severity === "high") return "high";
-  if (v.severity === "medium") return "medium";
-  return "low";
+  return v.severity;
 }
 
 type Props = {
@@ -371,10 +368,8 @@ function ViolationCard({ v }: { v: Violation }) {
         <div className="font-semibold text-gray-900">
           Штраф для юр. лица: {fmt(v.fineMin)} – {fmt(v.fineMax)}
         </div>
-        {v.fineMinIp != null && v.fineMaxIp != null && (
-          <div className="text-sm text-gray-500 mt-0.5">
-            для ИП: {fmt(v.fineMinIp)} – {fmt(v.fineMaxIp)}
-          </div>
+        {v.lawArticle && (
+          <div className="text-xs text-gray-400 mt-0.5">{v.lawArticle}</div>
         )}
       </div>
       {v.enforcementNote && (
