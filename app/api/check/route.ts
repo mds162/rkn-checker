@@ -14,12 +14,13 @@ export const maxDuration = 60;
 const CONTACTS_TEXT_KW = [
   "контакты", "контакт", "о компании", "о нас", "реквизиты",
   "about", "contacts", "contact", "о фирме", "о магазине",
-  "наша компания", "связаться", "связь",
+  "наша компания", "связаться", "связь", "написать нам",
+  "адрес", "телефон", "где мы", "как нас найти",
 ];
 
 // Matches href path segment (case-insensitive)
 const CONTACTS_HREF_RE =
-  /\/(contact|contacts|about|about-us|aboutus|o-nas|o-kompanii|o-sebe|o-firme|rekvizity|requisites|company|info|corporate|svyaz|svyazatsya)(\/|\.|\?|$)/i;
+  /\/(kontakty|kontakt|contact|contacts|about|about-us|aboutus|o-nas|o-kompanii|o-sebe|o-firme|rekvizity|requisites|company|info|corporate|svyaz|svyazatsya|nashi-kontakty|our-contacts|reach-us)(\/|\.|\?|$)/i;
 
 async function fetchContactsPage(html: string, baseUrl: string): Promise<string | undefined> {
   const re = /<a\s[^>]*href=["']([^"'#][^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;

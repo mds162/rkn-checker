@@ -47,7 +47,7 @@ export function basicCheckHtml(url: string, html: string, extraHtml?: string): C
   // 1. Google Analytics
   const gaMatch = html.match(/google-analytics\.com|googletagmanager\.com|gtag\s*\(|ga\s*\(\s*['"]create['"]/i);
   if (gaMatch) {
-    add("google-analytics", `Найден код Google Analytics: «${gaMatch[0].slice(0, 80)}»`, "critical");
+    add("google-analytics", `Найден код Google Analytics (${gaMatch[0].slice(0, 60)}). Данные посетителей уходят в США автоматически. Если GA не упомянут в вашей политике конфиденциальности — это двойное нарушение: и локализации, и трансграничной передачи. Если упомянут — риск по трансграничной передаче снижается, но нарушение локализации остаётся.`, "critical");
   }
 
   // 2. Google Fonts
@@ -95,17 +95,18 @@ export function basicCheckHtml(url: string, html: string, extraHtml?: string): C
     add("pd-policy", "На странице не найдено ссылок на политику конфиденциальности", "medium");
   }
 
-  // 7. Cookie-баннер
+  // 7. Cookie-баннер: нарушение если (а) нет слова cookie/куки вообще,
+  // или (б) есть, но рядом нет ни одного слова согласия/информирования
   const hasCookieWord = /cookie|куки/i.test(html);
-  if (hasCookieWord) {
-    const cookieIdx = html.search(/cookie|куки/i);
-    const nearby = html.slice(Math.max(0, cookieIdx - 300), cookieIdx + 300);
-    const hasConsent = /принять|согласен|ок\b|понятно|accept/i.test(nearby);
-    if (!hasConsent) {
-      add("cookie-banner", "Не найден баннер согласия на cookies", "high");
-    }
-  } else {
+  if (!hasCookieWord) {
     add("cookie-banner", "Не найден баннер согласия на cookies", "high");
+  } else {
+    const cookieIdx = html.search(/cookie|куки/i);
+    const nearby = html.slice(Math.max(0, cookieIdx - 600), cookieIdx + 600);
+    const hasConsent = /принять|соглаш|согласен|ок\b|понятно|accept|agree|продолжая|оставаясь|использу/i.test(nearby);
+    if (!hasConsent) {
+      add("cookie-banner", "Слово «cookie» найдено, но рядом нет текста о согласии или информировании", "high");
+    }
   }
 
   // 8. SSL
@@ -178,7 +179,13 @@ export function basicCheckHtml(url: string, html: string, extraHtml?: string): C
       !hasOgrn && "ОГРН",
       !hasLegalName && "название юр.лица (ООО/ИП/АО)"
     ].filter(Boolean).join(", ");
-    add("requisites-missing", `Не найдено на странице: ${missing}`, "low");
+    if (extraHtml) {
+      // Проверили главную + страницу контактов — реквизиты реально отсутствуют
+      add("requisites-missing", `Не найдено ни на главной, ни на странице контактов: ${missing}`, "low");
+    } else {
+      // Страница контактов не найдена автоматически — возможен ложный результат
+      add("requisites-missing", `Не найдено на главной странице: ${missing}. Реквизиты могут находиться на странице «Контакты» — чекер не смог найти её автоматически. Проверьте вручную или запустите Pro-режим.`, "low");
+    }
   }
 
   // 13. Контакты (телефон или email) — проверяем во всех доступных страницах

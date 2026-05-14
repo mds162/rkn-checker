@@ -162,7 +162,7 @@ export const LAWS: LawRule[] = [
   {
     id: "google-analytics",
     category: "Иностранные сервисы",
-    title: "Подключён Google Analytics без согласия и локализации ПДн",
+    title: "Подключён Google Analytics — данные пользователей уходят в США",
     law: "ФЗ-152 + ФЗ-242",
     fineMin: 1000000,
     fineMax: 6000000,
@@ -170,7 +170,7 @@ export const LAWS: LawRule[] = [
     fineMaxIp: 600000,
     howToCheck: "Найти скрипт gtag, google-analytics.com, googletagmanager.com",
     realRiskLevel: "high",
-    enforcementNote: NOTE_HIGH,
+    enforcementNote: "Google Analytics автоматически отправляет IP-адреса и поведение пользователей на серверы Google в США — это нарушение требования локализации ПДн (ст. 18.1 ФЗ-152), которое не устраняется политикой конфиденциальности. Если GA упомянут в политике с согласием пользователя — риск по трансграничной передаче снижается, но нарушение локализации остаётся. РКН с 2022 года целенаправленно выявляет GA на российских сайтах. Решение: заменить на Яндекс.Метрику или настроить server-side проксирование через российский сервер.",
     lawArticle: "ч. 8 ст. 13.11 КоАП РФ",
     lastReviewed: "2026-05",
   },
