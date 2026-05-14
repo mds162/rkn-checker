@@ -80,8 +80,11 @@ async function fetchContactsPage(html: string, baseUrl: string): Promise<string 
     }
   }
 
+  console.log(`[contacts] baseUrl=${baseUrl} foundViaLink=${contactUrl ?? "none"}`);
+
   if (contactUrl && contactUrl !== baseUrl) {
     const result = await fetchUrl(contactUrl);
+    console.log(`[contacts] fetchUrl(${contactUrl}) => ${result ? result.length + " chars" : "undefined"}`);
     if (result) return result;
   }
 
@@ -91,9 +94,13 @@ async function fetchContactsPage(html: string, baseUrl: string): Promise<string 
     const probeUrl = origin + path;
     if (probeUrl === baseUrl) continue;
     const result = await fetchUrl(probeUrl);
-    if (result) return result;
+    if (result) {
+      console.log(`[contacts] probe success: ${probeUrl} => ${result.length} chars`);
+      return result;
+    }
   }
 
+  console.log(`[contacts] all probes failed for ${origin}`);
   return undefined;
 }
 
