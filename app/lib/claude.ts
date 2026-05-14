@@ -34,9 +34,11 @@ ${LAWS.map((l) => `- ${l.id}: ${l.title} | ${l.law} | штраф ${l.fineMin}–
      * Права субъектов ПДн
    - Если каких-то пунктов нет — нарушения pd-policy или pd-consent
 
-3. СТРАНИЦА КОНТАКТОВ / О КОМПАНИИ:
-   - Проверь наличие: полного наименования (ООО/ИП), ИНН, ОГРН/ОГРНИП, физического адреса
-   - Если нет — нарушения req-company, req-inn, req-address
+3. РЕКВИЗИТЫ ЮР. ЛИЦА:
+   - Смотри поле «=== ПРЕДВЫЧИСЛЕННАЯ ПРОВЕРКА РЕКВИЗИТОВ ===» — там уже указан готовый результат regex-анализа
+   - Если там написано «найдены» — НЕ добавляй requisites-missing
+   - Если там написано «не найдены» — добавь одно нарушение requisites-missing (не req-inn, не req-company, не req-address)
+   - Не перепроверяй реквизиты самостоятельно — доверяй предвычисленному результату
 
 4. ФОРМЫ (данные из form-analyzer):
    - formsWithoutConsent > 0 → нарушение pd-consent
@@ -104,6 +106,33 @@ function stripScriptsAndStyles(html: string): string {
     .replace(/\s{3,}/g, "\n");
 }
 
+function checkRequisites(pages: SitePages): { found: boolean; detail: string } {
+  const allText = [
+    pages.homepage.html,
+    pages.contacts?.content ?? "",
+  ]
+    .join("\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;|&#160;/g, " ")
+    .replace(/\s+/g, " ");
+
+  const innRegex = /ИНН(?:\/КПП)?[\s:/]{0,10}(\d[\d ]{7,11}\d)/i;
+  const ogrnRegex = /ОГРН(?:ИП)?[\s:]{0,5}(\d[\d ]{11,15}\d)/i;
+  const legalNameRegex = /(ООО|ПАО|ОАО|ЗАО)\s+\S{2,}|ИП\s+[А-ЯЁ]/;
+
+  const innMatch = allText.match(innRegex);
+  const hasInn = innMatch ? [10, 12].includes(innMatch[1].replace(/\s/g, "").length) : false;
+  const ogrnMatch = allText.match(ogrnRegex);
+  const hasOgrn = ogrnMatch ? [13, 15].includes(ogrnMatch[1].replace(/\s/g, "").length) : false;
+  const hasName = legalNameRegex.test(allText);
+
+  if (hasInn && hasOgrn && hasName) {
+    return { found: true, detail: `ИНН найден, ОГРН найден, наименование найдено` };
+  }
+  const missing = [!hasInn && "ИНН", !hasOgrn && "ОГРН", !hasName && "наименование юр.лица"].filter(Boolean).join(", ");
+  return { found: false, detail: `Не найдено: ${missing}` };
+}
+
 export async function analyzeWithClaude(
   pages: SitePages,
   cmp: CmpResult,
@@ -118,9 +147,17 @@ export async function analyzeWithClaude(
 
   const formSummary = `Всего форм: ${forms.totalForms}, собирают ПДн: ${forms.pdFormsCount}, без согласия: ${forms.formsWithoutConsent}, предзаполненные галочки: ${forms.formsWithPreCheckedConsent}, без ссылки на политику: ${forms.formsWithoutPolicyLink}`;
 
+  const requisitesCheck = checkRequisites(pages);
+  const requisitesSummary = requisitesCheck.found
+    ? `РЕКВИЗИТЫ НАЙДЕНЫ (${requisitesCheck.detail}) — нарушение requisites-missing НЕ добавлять`
+    : `РЕКВИЗИТЫ НЕ НАЙДЕНЫ (${requisitesCheck.detail}) — добавить нарушение requisites-missing`;
+
   const cleanedHomepage = stripScriptsAndStyles(pages.homepage.html);
 
   const userContent = `URL: ${pages.homepage.url}
+
+=== ПРЕДВЫЧИСЛЕННАЯ ПРОВЕРКА РЕКВИЗИТОВ ===
+${requisitesSummary}
 
 === ГЛАВНАЯ СТРАНИЦА (HTML без скриптов/стилей, до 300 КБ) ===
 ${truncate(cleanedHomepage, 300_000)}
