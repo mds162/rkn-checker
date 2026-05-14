@@ -155,10 +155,12 @@ export function basicCheckHtml(url: string, html: string, extraHtml?: string): C
     .replace(/&nbsp;|&#160;/g, " ")
     .replace(/\s+/g, " ");
 
-  const innRegex = /ИНН[\s:]{0,5}(\d[\d ]{7,11}\d)/i;
+  // ИНН может идти как "ИНН: 1234567890" или "ИНН/КПП: 1234567890/..."
+  const innRegex = /ИНН(?:\/КПП)?[\s:/]{0,10}(\d[\d ]{7,11}\d)/i;
   const ogrnRegex = /ОГРН(?:ИП)?[\s:]{0,5}(\d[\d ]{11,15}\d)/i;
   // Название: с кавычками или без («ООО Биофор» или ООО Биофор)
-  const legalNameRegex = /\b(ООО|АО|ПАО|ИП|ОАО|ЗАО)\s+(?:["«]?.{2,40}["»]?)/;
+  // \b не работает с кириллицей в JS — используем пробел/пунктуацию или начало строки
+  const legalNameRegex = /(?:^|[\s,;(-])(ООО|АО|ПАО|ИП|ОАО|ЗАО)\s+["«]?.{2,40}["»]?/m;
 
   const hasInn = (() => {
     const m = plainTextForReq.match(innRegex);
