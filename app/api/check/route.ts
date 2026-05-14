@@ -22,7 +22,50 @@ const CONTACTS_TEXT_KW = [
 const CONTACTS_HREF_RE =
   /\/(kontakty|kontakt|contact|contacts|about|about-us|aboutus|o-nas|o-kompanii|o-sebe|o-firme|rekvizity|requisites|company|info|corporate|svyaz|svyazatsya|nashi-kontakty|our-contacts|reach-us)(\/|\.|\?|$)/i;
 
+const CONTACTS_PROBE_PATHS = [
+  // Русская транслитерация
+  "/kontakty", "/kontakty/", "/kontakt", "/kontakt/",
+  "/nashi-kontakty", "/nashi-kontakty/",
+  "/adres", "/adres/", "/adresa", "/adresa/",
+  "/o-nas", "/o-nas/", "/o-kompanii", "/o-kompanii/",
+  "/o-sebe", "/o-sebe/", "/o-firme", "/o-firme/",
+  "/rekvizity", "/rekvizity/",
+  "/svyaz", "/svyaz/", "/svyazatsya", "/svyazatsya/",
+  // Английские варианты
+  "/contacts", "/contacts/", "/contact", "/contact/",
+  "/contact-us", "/contact-us/", "/cont", "/cont/",
+  "/address", "/address/",
+  "/about", "/about/", "/about-us", "/about-us/",
+  "/our-contacts", "/our-contacts/", "/we", "/we/",
+  "/reach-us", "/reach-us/", "/get-in-touch", "/get-in-touch/",
+  // Прочие
+  "/info", "/info/", "/company", "/company/",
+  "/requisites", "/requisites/",
+];
+
+async function fetchUrl(url: string): Promise<string | undefined> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(url, {
+      signal: controller.signal,
+      redirect: "follow",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "ru-RU,ru;q=0.9,en;q=0.8",
+      },
+    });
+    clearTimeout(timer);
+    if (!res.ok) return undefined;
+    return (await res.text()).slice(0, 200_000);
+  } catch {
+    return undefined;
+  }
+}
+
 async function fetchContactsPage(html: string, baseUrl: string): Promise<string | undefined> {
+  // 1. Ищем ссылку на контакты в HTML
   const re = /<a\s[^>]*href=["']([^"'#][^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;
   let m: RegExpExecArray | null;
   let contactUrl: string | undefined;
@@ -36,24 +79,22 @@ async function fetchContactsPage(html: string, baseUrl: string): Promise<string 
       if (contactUrl) break;
     }
   }
-  if (!contactUrl || contactUrl === baseUrl) return undefined;
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch(contactUrl, {
-      signal: controller.signal,
-      redirect: "follow",
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "ru-RU,ru;q=0.9,en;q=0.8",
-      },
-    });
-    clearTimeout(timer);
-    return (await res.text()).slice(0, 200_000);
-  } catch {
-    return undefined;
+
+  if (contactUrl && contactUrl !== baseUrl) {
+    const result = await fetchUrl(contactUrl);
+    if (result) return result;
   }
+
+  // 2. Фоллбэк: перебираем распространённые URL напрямую
+  const origin = new URL(baseUrl).origin;
+  for (const path of CONTACTS_PROBE_PATHS) {
+    const probeUrl = origin + path;
+    if (probeUrl === baseUrl) continue;
+    const result = await fetchUrl(probeUrl);
+    if (result) return result;
+  }
+
+  return undefined;
 }
 
 export async function POST(req: Request) {
