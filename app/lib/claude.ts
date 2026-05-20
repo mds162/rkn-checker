@@ -201,8 +201,13 @@ ${formSummary}`;
     throw new Error("Claude не вернул текстовый ответ");
   }
 
-  const cleaned = textBlock.text.replace(/```json\s*|\s*```/g, "").trim();
-  const parsed = JSON.parse(cleaned) as {
+  const raw = textBlock.text;
+  // Extract JSON object robustly — find outermost { ... }
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error(`Claude не вернул JSON. Ответ: ${raw.slice(0, 200)}`);
+  }
+  const parsed = JSON.parse(jsonMatch[0]) as {
     violations: { id: string; evidence: string; severity: Violation["severity"] }[];
   };
 
