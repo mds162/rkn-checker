@@ -198,14 +198,22 @@ export function ResultDisplay({ result, onReset, onCheckPro, proLoading, proErro
       {/* Passed rules */}
       {result.passed.filter((p) => !UNVERIFIABLE_IDS.has(p.id)).length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-200 p-8 mb-6">
-          <h2 className="text-xl font-bold mb-4 text-green-700">
-            ✓ Пройдено успешно — {result.passed.filter((p) => !UNVERIFIABLE_IDS.has(p.id)).length} из {result.rulesChecked} проверок
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {result.passed.filter((p) => !UNVERIFIABLE_IDS.has(p.id)).map((p) => (
-              <PassedCard key={p.id} p={p} />
-            ))}
-          </div>
+          {(() => {
+            const filteredPassed = result.passed.filter((p) => !UNVERIFIABLE_IDS.has(p.id));
+            const total = result.violations.length + filteredPassed.length;
+            return (
+              <>
+                <h2 className="text-xl font-bold mb-4 text-green-700">
+                  ✓ Нарушений не найдено — {filteredPassed.length} из {total} проверок
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {filteredPassed.map((p) => (
+                    <PassedCard key={p.id} p={p} />
+                  ))}
+                </div>
+              </>
+            );
+          })()}
         </div>
       )}
 
